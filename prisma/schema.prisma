@@ -1,0 +1,389 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// TENANT / VENDOR (Multi-Tenancy)
+// ============================================
+
+model Tenant {
+  id                 String        @id @default(uuid())
+  name               String        @db.VarChar(255)
+  email              String        @unique @db.VarChar(255)
+  phone              String?       @db.VarChar(20)
+  logoUrl            String?       @db.Text
+  primaryColor      String        @default("#0ea5e9") @db.VarChar(7)
+  subscriptionPlan  SubscriptionPlan @default(FREE)
+  isActive           Boolean       @default(true)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  users              User[]
+  outlets            Outlet[]
+  frameTemplates     FrameTemplate[]
+  vouchers           Voucher[]
+  testimonials       Testimonial[]
+  brandAssets        BrandAsset[]
+}
+
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+// ============================================
+// OUTLET (Photo Booth Location)
+// ============================================
+
+model Outlet {
+  id           String        @id @default(uuid())
+  tenantId     String
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name         String        @db.VarChar(255)
+  address      String        @db.Text
+  phone        String?       @db.VarChar(20)
+  latitude     Decimal?     @db.Decimal(10, 8)
+  longitude    Decimal?     @db.Decimal(11, 8)
+  operatingHours Json?      // {"monday": "09:00-21:00", ...}
+  isActive     Boolean       @default(true)
+  machineId    String        @unique @db.VarChar(50) // Unique booth identifier
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  config       OutletConfig?
+  sessions     SessionPhoto[]
+  transactions Transaction[]
+  heartbeats   BoothHeartbeat[]
+  testimonials Testimonial[]
+
+  @@index([tenantId])
+  @@index([machineId])
+}
+
+model OutletConfig {
+  id              String   @id @default(uuid())
+  outletId        String   @unique
+  outlet          Outlet   @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  paymentMethods  Json     @default("{\"cash\": true, \"qris\": true, \"voucher\": true}")
+  priceDefault    Decimal  @default(0) @db.Decimal(10, 2)
+  printEnabled    Boolean  @default(true)
+  galleryEnabled  Boolean  @default(true)
+  gifEnabled      Boolean  @default(true)
+  newspaperEnabled Boolean @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// USERS (Role-based Access)
+// ============================================
+
+model User {
+  id           String        @id @default(uuid())
+  tenantId     String
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outletId     String?
+  outlet       Outlet?       @relation(fields: [outletId], references: [id])
+  email        String        @unique @db.VarChar(255)
+  passwordHash String        @db.VarChar(255)
+  name         String        @db.VarChar(255)
+  role         UserRole
+  isActive     Boolean       @default(true)
+  lastLogin    DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([tenantId])
+  @@index([outletId])
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  OWNER
+  MANAGER
+  STAFF
+}
+
+// ============================================
+// FRAME TEMPLATES
+// ============================================
+
+model FrameTemplate {
+  id           String        @id @default(uuid())
+  tenantId     String
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name         String        @db.VarChar(255)
+  type         FrameType
+  imageUrl     String        @db.Text
+  thumbnailUrl String?       @db.Text
+  width        Int
+  height       Int
+  price        Decimal       @default(0) @db.Decimal(10, 2)
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  sessions     SessionPhoto[]
+
+  @@index([tenantId])
+}
+
+enum FrameType {
+  FOUR_R        // 4R Standard
+  A4_NEWSPAPER  // A4 Newspaper layout
+  CUSTOM        // Custom size
+}
+
+// ============================================
+// SESSION PHOTOS (Photo Session)
+// ============================================
+
+model SessionPhoto {
+  id              String          @id @default(uuid())
+  outletId        String
+  outlet          Outlet          @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  frameId         String?
+  frame           FrameTemplate? @relation(fields: [frameId], references: [id])
+  sessionCode     String          @unique @db.VarChar(20)
+  status          SessionStatus  @default(CAPTURING)
+  photos          Json            // Array of photo URLs/Base64
+  gifUrl          String?         @db.Text
+  newspaperUrl    String?         @db.Text
+  totalPrice      Decimal         @default(0) @db.Decimal(10, 2)
+  paymentMethod   PaymentMethod?
+  paymentStatus   PaymentStatus   @default(PENDING)
+  paymentRef      String?         @db.VarChar(100)
+  voucherCode     String?         @db.VarChar(50)
+  galleryCode     String          @unique @db.VarChar(20)
+  galleryExpiresAt DateTime?
+  createdAt      DateTime        @default(now())
+  completedAt    DateTime?
+
+  transaction    Transaction?
+
+  @@index([outletId, status])
+  @@index([sessionCode])
+  @@index([galleryCode])
+}
+
+enum SessionStatus {
+  CAPTURING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum PaymentMethod {
+  CASH
+  QRIS
+  VOUCHER
+  GATEWAY
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+// ============================================
+// VOUCHERS
+// ============================================
+
+model Voucher {
+  id           String        @id @default(uuid())
+  tenantId     String
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code         String        @unique @db.VarChar(50)
+  type         VoucherType
+  value        Decimal       @db.Decimal(10, 2)
+  minOrder     Decimal       @default(0) @db.Decimal(10, 2)
+  maxUses      Int?
+  usedCount    Int           @default(0)
+  usageType    UsageType
+  validFrom    DateTime
+  validUntil   DateTime
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([tenantId])
+  @@index([code])
+}
+
+enum VoucherType {
+  PERCENTAGE
+  FIXED
+}
+
+enum UsageType {
+  SINGLE_USE
+  MULTI_USE
+}
+
+// ============================================
+// TRANSACTIONS
+// ============================================
+
+model Transaction {
+  id              String          @id @default(uuid())
+  outletId        String
+  outlet          Outlet          @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  sessionId       String          @unique
+  session         SessionPhoto    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  amount          Decimal          @db.Decimal(10, 2)
+  paymentMethod   PaymentMethod
+  paymentGateway  PaymentGateway?
+  transactionRef  String?         @db.VarChar(100)
+  qrisString      String?         @db.Text // Dynamic QRIS
+  status          TransactionStatus @default(PENDING)
+  createdAt       DateTime        @default(now())
+  paidAt          DateTime?
+
+  @@index([outletId, createdAt])
+}
+
+enum PaymentGateway {
+  TOKOPAY
+  MIDTRANS
+  DOKU
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+// ============================================
+// BOOTH HEARTBEAT (Health Monitoring)
+// ============================================
+
+model BoothHeartbeat {
+  id            String        @id @default(uuid())
+  machineId     String        @db.VarChar(50)
+  outletId      String
+  outlet        Outlet        @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  status        BoothStatus   @default(ONLINE)
+  cpuUsage      Decimal?      @db.Decimal(5, 2)
+  memoryUsage   Decimal?      @db.Decimal(5, 2)
+  diskUsage     Decimal?      @db.Decimal(5, 2)
+  lastPhotoTime DateTime?
+  lastSeen      DateTime
+  createdAt     DateTime      @default(now())
+
+  @@index([machineId, lastSeen])
+  @@index([outletId])
+}
+
+enum BoothStatus {
+  ONLINE
+  OFFLINE
+  ERROR
+}
+
+// ============================================
+// GALLERY QUEUE (Offline Upload Queue)
+// ============================================
+
+model GalleryQueue {
+  id           String        @id @default(uuid())
+  sessionId    String
+  type         GalleryType
+  localPath    String        @db.Text
+  cloudUrl     String?       @db.Text
+  status       QueueStatus   @default(PENDING)
+  retryCount   Int           @default(0)
+  maxRetries   Int           @default(3)
+  errorMessage String?       @db.Text
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+enum GalleryType {
+  PHOTO
+  GIF
+  NEWSPAPER
+}
+
+enum QueueStatus {
+  PENDING
+  UPLOADING
+  COMPLETED
+  FAILED
+}
+
+// ============================================
+// MARKETING - TESTIMONIALS
+// ============================================
+
+model Testimonial {
+  id            String        @id @default(uuid())
+  tenantId      String
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outletId      String?
+  outlet        Outlet?       @relation(fields: [outletId], references: [id])
+  customerName  String        @db.VarChar(255)
+  customerPhoto String?       @db.Text
+  message       String        @db.Text
+  rating        Int           // 1-5
+  isApproved    Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+
+  @@index([tenantId])
+}
+
+// ============================================
+// BRAND ASSETS
+// ============================================
+
+model BrandAsset {
+  id        String        @id @default(uuid())
+  tenantId  String
+  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type      AssetType
+  url       String        @db.Text
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([tenantId])
+}
+
+enum AssetType {
+  HERO_IMAGE
+  LOGO
+  FAVICON
+  BANNER
+}
+
+// ============================================
+// API KEYS (For Booth Authentication)
+// ============================================
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  key         String    @unique @db.VarChar(100)
+  outletId    String
+  name        String    @db.VarChar(100)
+  permissions Json      // Array of permissions
+  isActive    Boolean   @default(true)
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  lastUsed    DateTime?
+
+  @@index([key])
+  @@index([outletId])
+}
