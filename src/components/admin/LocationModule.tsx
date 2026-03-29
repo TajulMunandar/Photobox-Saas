@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   MapPin, 
   Search, 
@@ -32,6 +32,15 @@ function LocationForm({ outlet, onClose, onSubmit }: LocationFormProps) {
     mapsUrl: outlet?.mapsUrl || ''
   })
 
+  // Update form when outlet prop changes (for edit mode)
+  useEffect(() => {
+    setFormData({
+      name: outlet?.name || '',
+      location: outlet?.location || '',
+      mapsUrl: outlet?.mapsUrl || ''
+    })
+  }, [outlet])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit(formData)
@@ -54,17 +63,17 @@ function LocationForm({ outlet, onClose, onSubmit }: LocationFormProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b dark:border-gray-800">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {outlet ? 'Edit Location' : 'Add Location'}
           </h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
           <div>
-            <label className="block text-sm font-medium mb-1">Location Name</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Location Name</label>
             <input
               type="text"
               value={formData.name}
@@ -75,7 +84,7 @@ function LocationForm({ outlet, onClose, onSubmit }: LocationFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Address</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Address</label>
             <input
               type="text"
               value={formData.location}
@@ -86,14 +95,43 @@ function LocationForm({ outlet, onClose, onSubmit }: LocationFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Google Maps URL</label>
-            <input
-              type="url"
-              value={formData.mapsUrl}
-              onChange={(e) => setFormData({ ...formData, mapsUrl: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              required
-            />
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Pick Location on Map</label>
+            <div className="space-y-2">
+              <div className="relative w-full h-64 rounded-lg overflow-hidden border dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
+                <iframe
+                  id="map-embed"
+                  className="w-full h-full"
+                  src={formData.mapsUrl || "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d126748.56398935027!2d106.698688671875!3d-6.208763868808566!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f5390917b5c7%3A0x2e69f5390917b5c7!2sJakarta!5e0!3m2!1sen!2sid!4v1620000000000!5m2!1sen!2sid"}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  window.open('https://www.google.com/maps', '_blank')
+                }}
+                className="w-full px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 flex items-center justify-center gap-2"
+              >
+                <MapPin className="w-4 h-4" />
+                Open Google Maps to Select Location
+              </button>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                1. Click button above to open Google Maps{String.fromCharCode(10)}
+                2. Navigate to your desired location{String.fromCharCode(10)}
+                3. Click Share {'->'} Embed a map{String.fromCharCode(10)}
+                4. Copy the src URL and paste below
+              </p>
+              <input
+                type="url"
+                value={formData.mapsUrl}
+                onChange={(e) => setFormData({ ...formData, mapsUrl: e.target.value })}
+                placeholder="Paste Google Maps embed URL here..."
+                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                required
+              />
+            </div>
           </div>
 
           <div className="flex gap-2 pt-4">
@@ -102,7 +140,7 @@ function LocationForm({ outlet, onClose, onSubmit }: LocationFormProps) {
               onClick={onClose}
               className="flex-1 px-4 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
-              Cancel
+              <span className="text-gray-900 dark:text-white">Cancel</span>
             </button>
             <button
               type="submit"
@@ -154,7 +192,7 @@ export function LocationModule() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-300" />
         <input
           type="text"
           placeholder="Search locations..."
@@ -198,8 +236,8 @@ export function LocationModule() {
                 onClick={() => openMaps(outlet.mapsUrl)}
                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
               >
-                <ExternalLink className="w-4 h-4" />
-                Open Map
+                <ExternalLink className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                <span className="text-gray-900 dark:text-white">Open Map</span>
               </button>
               <button
                 onClick={() => {
@@ -208,8 +246,8 @@ export function LocationModule() {
                 }}
                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
               >
-                <Edit className="w-4 h-4" />
-                Edit
+                <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                <span className="text-gray-900 dark:text-white">Edit</span>
               </button>
             </div>
           </motion.div>
@@ -219,7 +257,7 @@ export function LocationModule() {
       {/* Empty State */}
       {filteredOutlets.length === 0 && (
         <div className="text-center py-12">
-          <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <MapPin className="w-12 h-12 text-gray-400 dark:text-gray-300 mx-auto mb-4" />
           <p className="text-gray-500 dark:text-gray-400">No locations found</p>
         </div>
       )}

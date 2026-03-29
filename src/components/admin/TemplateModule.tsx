@@ -56,17 +56,17 @@ function TemplateForm({ template, onClose, onSubmit }: TemplateFormProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b dark:border-gray-800">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {template ? 'Edit Template' : 'Add New Template'}
           </h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
           <div>
-            <label className="block text-sm font-medium mb-1">Template Name</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Template Name</label>
             <input
               type="text"
               value={formData.name}
@@ -77,11 +77,11 @@ function TemplateForm({ template, onClose, onSubmit }: TemplateFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Category</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Category</label>
             <select
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value as '4R' | 'A4 Newspaper' | 'GIF' })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
               <option value="4R">4R</option>
               <option value="A4 Newspaper">A4 Newspaper</option>
@@ -90,18 +90,30 @@ function TemplateForm({ template, onClose, onSubmit }: TemplateFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Image URL</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Image</label>
             <input
-              type="url"
-              value={formData.imageUrl}
-              onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) {
+                  const reader = new FileReader()
+                  reader.onloadend = () => {
+                    setFormData({ ...formData, imageUrl: reader.result as string })
+                  }
+                  reader.readAsDataURL(file)
+                }
+              }}
               className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
               required
             />
+            {formData.imageUrl && (
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Image selected</p>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Price (Rp)</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Price (Rp)</label>
             <input
               type="number"
               value={formData.price}
@@ -120,7 +132,7 @@ function TemplateForm({ template, onClose, onSubmit }: TemplateFormProps) {
                 onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                 className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
               />
-              <span className="text-sm font-medium">Active</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Active</span>
             </label>
           </div>
 
@@ -130,7 +142,7 @@ function TemplateForm({ template, onClose, onSubmit }: TemplateFormProps) {
               onClick={onClose}
               className="flex-1 px-4 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
-              Cancel
+              <span className="text-gray-900 dark:text-white">Cancel</span>
             </button>
             <button
               type="submit"
@@ -217,7 +229,7 @@ export function TemplateModule() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-300" />
           <input
             type="text"
             placeholder="Search templates..."
@@ -229,7 +241,7 @@ export function TemplateModule() {
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="px-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="px-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
         >
           <option value="all">All Categories</option>
           <option value="4R">4R</option>
@@ -256,7 +268,7 @@ export function TemplateModule() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <ImageIcon className="w-12 h-12 text-gray-400" />
+                <ImageIcon className="w-12 h-12 text-gray-400 dark:text-gray-300" />
               )}
             </div>
 
@@ -290,15 +302,15 @@ export function TemplateModule() {
                   }}
                   className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
                 >
-                  <Edit className="w-4 h-4" />
-                  Edit
+                  <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                  <span className="text-gray-900 dark:text-white">Edit</span>
                 </button>
                 <button
                   onClick={() => setDeleteConfirm(template.id)}
                   className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-sm"
                 >
-                  <Trash2 className="w-4 h-4" />
-                  Delete
+                  <Trash2 className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                  <span className="text-gray-900 dark:text-white">Delete</span>
                 </button>
               </div>
             </div>
@@ -344,7 +356,7 @@ export function TemplateModule() {
               className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-sm p-6"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-semibold mb-2">Delete Template?</h3>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Delete Template?</h3>
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 This action cannot be undone. Are you sure you want to delete this template?
               </p>

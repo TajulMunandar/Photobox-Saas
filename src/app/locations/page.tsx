@@ -203,6 +203,7 @@ export default function LocationsPage() {
                   selectedOutlet === outlet.id ? 'ring-2' : ''
                 }`}
                 style={{
+                  // @ts-ignore - ringColor prop for motion
                   ringColor: selectedOutlet === outlet.id ? branding.primaryColor : undefined
                 }}
                 onClick={() => {

@@ -1,15 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Download, Printer, Share2, QrCode, ArrowLeft, Copy, Check } from 'lucide-react'
+import { Download, Printer, Share2, QrCode, ArrowLeft, Copy, Check, Loader2 } from 'lucide-react'
 
 // ============================================
 // Gallery Page - View Photos by Code
 // ============================================
 
-export default function GalleryPage() {
+function GalleryContent() {
   const searchParams = useSearchParams()
   const code = searchParams.get('code')
   
@@ -166,5 +166,21 @@ export default function GalleryPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+// ============================================
+// Wrap with Suspense for useSearchParams
+// ============================================
+
+export default function GalleryPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+      </div>
+    }>
+      <GalleryContent />
+    </Suspense>
   )
 }

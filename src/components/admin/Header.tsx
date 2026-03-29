@@ -14,7 +14,7 @@ export function Header() {
           onClick={toggleSidebar} 
           className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
         >
-          <Menu className="w-6 h-6" />
+          <Menu className="w-6 h-6 text-gray-600 dark:text-gray-300" />
         </button>
 
         {/* Search */}
@@ -56,7 +56,7 @@ export function Header() {
           <div className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center">
             <User className="w-4 h-4 text-white" />
           </div>
-          <span className="hidden sm:block text-sm font-medium">Admin User</span>
+          <span className="hidden sm:block text-sm font-medium text-gray-900 dark:text-white">Admin User</span>
         </div>
       </div>
     </header>

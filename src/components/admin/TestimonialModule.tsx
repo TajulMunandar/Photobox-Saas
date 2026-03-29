@@ -59,32 +59,32 @@ function TestimonialForm({ testimonial, onClose, onSubmit }: TestimonialFormProp
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b dark:border-gray-800">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {testimonial ? 'Edit Testimonial' : 'Add Testimonial'}
           </h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
           <div>
-            <label className="block text-sm font-medium mb-1">Customer Name</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Customer Name</label>
             <input
               type="text"
               value={formData.customerName}
               onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Outlet</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Outlet</label>
             <select
               value={formData.outletId}
               onChange={(e) => setFormData({ ...formData, outletId: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
               required
             >
               <option value="">Select Outlet</option>
@@ -95,7 +95,7 @@ function TestimonialForm({ testimonial, onClose, onSubmit }: TestimonialFormProp
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Rating</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Rating</label>
             <div className="flex gap-2">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -117,12 +117,12 @@ function TestimonialForm({ testimonial, onClose, onSubmit }: TestimonialFormProp
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Comment</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Comment</label>
             <textarea
               value={formData.comment}
               onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
               rows={4}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
               required
             />
           </div>
@@ -135,7 +135,7 @@ function TestimonialForm({ testimonial, onClose, onSubmit }: TestimonialFormProp
                 onChange={(e) => setFormData({ ...formData, isApproved: e.target.checked })}
                 className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
               />
-              <span className="text-sm font-medium">Approved</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Approved</span>
             </label>
           </div>
 
@@ -145,7 +145,7 @@ function TestimonialForm({ testimonial, onClose, onSubmit }: TestimonialFormProp
               onClick={onClose}
               className="flex-1 px-4 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
-              Cancel
+              <span className="text-gray-900 dark:text-white">Cancel</span>
             </button>
             <button
               type="submit"
@@ -242,19 +242,19 @@ export function TestimonialModule() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-300" />
           <input
             type="text"
             placeholder="Search testimonials..."
             value={searchQuery}
             onChange={(e) => useDashboardStore.getState().setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full pl-10 pr-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
         </div>
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="px-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
         >
           <option value="all">All Status</option>
           <option value="approved">Approved</option>
@@ -274,7 +274,7 @@ export function TestimonialModule() {
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-purple-500" />
-                <span className="font-semibold">{testimonial.customerName}</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{testimonial.customerName}</span>
               </div>
               <span className={`text-xs px-2 py-1 rounded-full ${
                 testimonial.isApproved
@@ -333,15 +333,15 @@ export function TestimonialModule() {
                 }}
                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
               >
-                <Edit className="w-4 h-4" />
-                Edit
+                <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                <span className="text-gray-900 dark:text-white">Edit</span>
               </button>
               <button
                 onClick={() => setDeleteConfirm(testimonial.id)}
                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-sm"
               >
-                <Trash2 className="w-4 h-4" />
-                Delete
+                <Trash2 className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                <span className="text-gray-900 dark:text-white">Delete</span>
               </button>
             </div>
           </motion.div>
@@ -386,7 +386,7 @@ export function TestimonialModule() {
               className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-sm p-6"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-semibold mb-2">Delete Testimonial?</h3>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Delete Testimonial?</h3>
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 This action cannot be undone. Are you sure you want to delete this testimonial?
               </p>

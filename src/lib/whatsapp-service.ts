@@ -17,10 +17,12 @@ export interface WhatsAppResult {
 // Configuration
 const FONNTE_API_URL = 'https://api.fonnte.com/send'
 const WABLAS_API_URL = 'https://wablas.com/api/v2/send-message'
+const WANOTIF_API_URL = 'https://wanotif.com/api/send-message'
 
 // Get config from environment
 const FONNTE_TOKEN = process.env.FONNTE_API_TOKEN || ''
 const WABLAS_TOKEN = process.env.WABLAS_API_TOKEN || ''
+const WANOTIF_TOKEN = process.env.WANOTIF_API_TOKEN || 'eJq5ydqkSzHDYydRdE8X'
 const DEFAULT_SENDER = process.env.WHATSAPP_SENDER_NUMBER || ''
 
 // ============================================
@@ -122,11 +124,66 @@ export async function sendWhatsAppWablas(message: WhatsAppMessage): Promise<What
 }
 
 // ============================================
+// Send WhatsApp Message via Wanotif
+// ============================================
+
+export async function sendWhatsAppWanotif(message: WhatsAppMessage): Promise<WhatsAppResult> {
+  if (!WANOTIF_TOKEN) {
+    console.error('Wanotif API token not configured')
+    return { success: false, error: 'Wanotif API not configured' }
+  }
+
+  try {
+    // Format phone number (remove +62 -> 62, or keep 0 prefix)
+    const formattedPhone = message.to.replace(/^\+62/, '62').replace(/^0/, '62')
+
+    const response = await fetch(WANOTIF_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': WANOTIF_TOKEN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        target: formattedPhone,
+        message: message.message,
+        url: message.imageUrl,
+      }),
+    })
+
+    const data = await response.json()
+
+    if (data.status === true || data.status === 'success') {
+      return {
+        success: true,
+        messageId: data.id || data.data?.id,
+      }
+    }
+
+    return {
+      success: false,
+      error: data.message || 'Failed to send WhatsApp message',
+    }
+  } catch (error) {
+    console.error('Wanotif WhatsApp error:', error)
+    return {
+      success: false,
+      error: String(error),
+    }
+  }
+}
+
+// ============================================
 // Unified Send Function (Auto-choose available provider)
 // ============================================
 
 export async function sendWhatsApp(message: WhatsAppMessage): Promise<WhatsAppResult> {
-  // Try Fonnte first if configured
+  // Try Wanotif first if configured (using provided token)
+  if (WANOTIF_TOKEN) {
+    const result = await sendWhatsAppWanotif(message)
+    if (result.success) return result
+  }
+
+  // Try Fonnte if configured
   if (FONNTE_TOKEN) {
     return await sendWhatsAppFonnte(message)
   }
@@ -147,7 +204,7 @@ export async function sendWhatsApp(message: WhatsAppMessage): Promise<WhatsAppRe
 
   return {
     success: false,
-    error: 'No WhatsApp provider configured (FONNTE or WABLAS)',
+    error: 'No WhatsApp provider configured (WANOTIF, FONNTE, or WABLAS)',
   }
 }
 

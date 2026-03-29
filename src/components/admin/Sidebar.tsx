@@ -97,7 +97,7 @@ export function Sidebar() {
             onClick={toggleSidebar} 
             className="lg:hidden p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </button>
         </div>
 

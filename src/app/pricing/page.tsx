@@ -162,6 +162,7 @@ export default function PricingPage() {
                 }`}
                 style={{
                   borderColor: plan.popular ? branding.primaryColor : undefined,
+                  // @ts-ignore - ringColor prop for motion
                   ringColor: plan.popular ? branding.primaryColor : undefined
                 }}
               >

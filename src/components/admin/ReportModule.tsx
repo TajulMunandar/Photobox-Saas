@@ -72,7 +72,7 @@ export function ReportModule() {
         <select
           value={dateRange}
           onChange={(e) => setDateRange(e.target.value)}
-          className="px-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="px-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
         >
           <option value="week">This Week</option>
           <option value="month">This Month</option>
@@ -81,7 +81,7 @@ export function ReportModule() {
         <select
           value={selectedOutlet}
           onChange={(e) => setSelectedOutlet(e.target.value)}
-          className="px-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="px-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
         >
           <option value="all">All Outlets</option>
           {outlets.map((outlet) => (
@@ -175,7 +175,7 @@ export function ReportModule() {
         transition={{ delay: 0.4 }}
         className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
       >
-        <h2 className="text-lg font-semibold mb-4">Weekly Revenue</h2>
+        <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Weekly Revenue</h2>
         <div className="h-64 flex items-end justify-between gap-2">
           {chartData.map((data, index) => (
             <div key={data.day} className="flex-1 flex flex-col items-center gap-2">
@@ -196,7 +196,7 @@ export function ReportModule() {
         transition={{ delay: 0.5 }}
         className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
       >
-        <h2 className="text-lg font-semibold mb-4">Recent Transactions</h2>
+        <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Recent Transactions</h2>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -211,11 +211,11 @@ export function ReportModule() {
             <tbody>
               {transactions.slice(0, 5).map((tx) => (
                 <tr key={tx.id} className="border-b dark:border-gray-800 last:border-0">
-                  <td className="py-3 px-4 text-sm font-medium">{tx.id}</td>
+                  <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">{tx.id}</td>
                   <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">
                     {outlets.find(o => o.id === tx.outletId)?.name || 'Unknown'}
                   </td>
-                  <td className="py-3 px-4 text-sm font-medium">{formatPrice(tx.amount)}</td>
+                  <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">{formatPrice(tx.amount)}</td>
                   <td className="py-3 px-4">
                     <span className={`text-xs px-2 py-1 rounded-full ${
                       tx.status === 'success'

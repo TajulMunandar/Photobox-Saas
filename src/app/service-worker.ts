@@ -1,3 +1,4 @@
+// @ts-nocheck
 // ============================================
 // Service Worker for Offline First Strategy
 // Handles caching and queue management

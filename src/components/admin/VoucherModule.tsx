@@ -66,21 +66,21 @@ function VoucherForm({ voucher, onClose, onSubmit }: VoucherFormProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b dark:border-gray-800">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {voucher ? 'Edit Voucher' : 'Create New Voucher'}
           </h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
           <div>
-            <label className="block text-sm font-medium mb-1">Discount Type</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Discount Type</label>
             <select
               value={formData.discountType}
               onChange={(e) => setFormData({ ...formData, discountType: e.target.value as 'percentage' | 'fixed' })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
               <option value="percentage">Percentage (%)</option>
               <option value="fixed">Fixed Amount (Rp)</option>
@@ -88,14 +88,14 @@ function VoucherForm({ voucher, onClose, onSubmit }: VoucherFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">
               Discount Value {formData.discountType === 'percentage' ? '(%)' : '(Rp)'}
             </label>
             <input
               type="number"
               value={formData.discountValue}
               onChange={(e) => setFormData({ ...formData, discountValue: parseInt(e.target.value) || 0 })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
               required
               min="0"
               max={formData.discountType === 'percentage' ? 100 : undefined}
@@ -103,12 +103,12 @@ function VoucherForm({ voucher, onClose, onSubmit }: VoucherFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Minimum Purchase (Rp)</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Minimum Purchase (Rp)</label>
             <input
               type="number"
               value={formData.minPurchase}
               onChange={(e) => setFormData({ ...formData, minPurchase: parseInt(e.target.value) || 0 })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
               required
               min="0"
             />
@@ -116,24 +116,24 @@ function VoucherForm({ voucher, onClose, onSubmit }: VoucherFormProps) {
 
           {formData.discountType === 'percentage' && (
             <div>
-              <label className="block text-sm font-medium mb-1">Maximum Discount (Rp)</label>
+              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Maximum Discount (Rp)</label>
               <input
                 type="number"
                 value={formData.maxDiscount || ''}
                 onChange={(e) => setFormData({ ...formData, maxDiscount: parseInt(e.target.value) || undefined })}
-                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                 min="0"
               />
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium mb-1">Usage Limit</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Usage Limit</label>
             <input
               type="number"
               value={formData.usageLimit}
               onChange={(e) => setFormData({ ...formData, usageLimit: parseInt(e.target.value) || 0 })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
               required
               min="1"
             />
@@ -141,22 +141,22 @@ function VoucherForm({ voucher, onClose, onSubmit }: VoucherFormProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Valid From</label>
+              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Valid From</label>
               <input
                 type="date"
                 value={formData.validFrom}
                 onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Valid Until</label>
+              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Valid Until</label>
               <input
                 type="date"
                 value={formData.validUntil}
                 onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                 required
               />
             </div>
@@ -170,7 +170,7 @@ function VoucherForm({ voucher, onClose, onSubmit }: VoucherFormProps) {
                 onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                 className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
               />
-              <span className="text-sm font-medium">Active</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Active</span>
             </label>
           </div>
 
@@ -180,7 +180,7 @@ function VoucherForm({ voucher, onClose, onSubmit }: VoucherFormProps) {
               onClick={onClose}
               className="flex-1 px-4 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
-              Cancel
+              <span className="text-gray-900 dark:text-white">Cancel</span>
             </button>
             <button
               type="submit"
@@ -273,19 +273,19 @@ export function VoucherModule() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-300" />
           <input
             type="text"
             placeholder="Search vouchers..."
             value={searchQuery}
             onChange={(e) => useDashboardStore.getState().setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full pl-10 pr-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
         </div>
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="px-4 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
         >
           <option value="all">All Status</option>
           <option value="active">Active</option>
@@ -311,7 +311,7 @@ export function VoucherModule() {
                 onClick={() => copyCode(voucher.code)}
                 className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
               >
-                <Copy className="w-4 h-4 text-gray-400" />
+                <Copy className="w-4 h-4 text-gray-400 dark:text-gray-300" />
               </button>
             </div>
 
@@ -368,15 +368,15 @@ export function VoucherModule() {
                 }}
                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
               >
-                <Edit className="w-4 h-4" />
-                Edit
+                <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                <span className="text-gray-900 dark:text-white">Edit</span>
               </button>
               <button
                 onClick={() => setDeleteConfirm(voucher.id)}
                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-sm"
               >
-                <Trash2 className="w-4 h-4" />
-                Delete
+                <Trash2 className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                <span className="text-gray-900 dark:text-white">Delete</span>
               </button>
             </div>
           </motion.div>
@@ -421,7 +421,7 @@ export function VoucherModule() {
               className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-sm p-6"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-semibold mb-2">Delete Voucher?</h3>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Delete Voucher?</h3>
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 This action cannot be undone. Are you sure you want to delete this voucher?
               </p>

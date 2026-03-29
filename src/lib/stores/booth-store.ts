@@ -24,28 +24,46 @@ export interface Frame {
   price: number
 }
 
+export interface Template {
+  id: string
+  name: string
+  theme: string
+  imageUrl: string
+  thumbnailUrl: string
+  slots: number
+  layout: 'grid-2x3' | 'grid-3x2' | 'custom'
+}
+
 export interface BoothSession {
   id: string
   code: string
   outletId: string
   frameId?: string
   frame?: Frame
+  templateId?: string
+  template?: Template
   photos: Photo[]
-  status: 'idle' | 'capturing' | 'countdown' | 'processing' | 'preview' | 'payment' | 'completed'
+  status: 'payment' | 'template-selection' | 'capturing' | 'countdown' | 'processing' | 'preview' | 'printing' | 'completed'
   countdownValue: number
   currentPhotoIndex: number
   totalPhotos: number
   mode: 'single' | 'burst' | 'gif'
   totalPrice: number
-  paymentMethod: 'cash' | 'qris' | 'voucher' | null
+  paymentMethod: 'qris' | 'voucher' | 'event' | null
   paymentStatus: 'pending' | 'paid' | 'failed'
   galleryCode?: string
   isOffline: boolean
-  customerPhone?: string  // Customer WhatsApp number for notification
+  customerPhone?: string
+  sessionTimer: number // Global session timer in seconds (9 minutes = 540)
+  sessionTimerActive: boolean
+  printCopies: number
+  selectedFilter?: string // Filter selected for photos (not frame)
+  transactionRef?: string
 }
 
 export interface BoothConfig {
   outletId: string
+  outletName: string
   machineId: string
   printEnabled: boolean
   galleryEnabled: boolean
@@ -53,13 +71,14 @@ export interface BoothConfig {
   newspaperEnabled: boolean
   defaultPrice: number
   paymentMethods: {
-    cash: boolean
     qris: boolean
     voucher: boolean
+    event: boolean
   }
   countdownDuration: number
   burstCount: number
   gifFrames: number
+  sessionTimeout: number // in seconds
 }
 
 interface BoothState {
@@ -74,19 +93,32 @@ interface BoothState {
   addPhoto: (photo: Photo) => void
   setProcessing: () => void
   setPreview: () => void
-  setPayment: (method: 'cash' | 'qris' | 'voucher') => void
+  setPayment: (method: 'qris' | 'voucher' | 'event') => void
   setPaymentStatus: (status: 'pending' | 'paid' | 'failed') => void
   setCompleted: (galleryCode: string) => void
   resetSession: () => void
+  setTemplateSelection: () => void
+  setPrinting: () => void
   
   // Actions - Config
   setConfig: (config: BoothConfig) => void
   setFrame: (frame: Frame) => void
+  setTemplate: (template: Template) => void
   
   // Actions - Offline
   setOffline: (isOffline: boolean) => void
   queuePhotoUpload: (photo: Photo) => void
   setCustomerPhone: (phone: string) => void
+  
+  // Actions - Timer
+  startSessionTimer: () => void
+  stopSessionTimer: () => void
+  decrementSessionTimer: () => void
+  
+  // Actions - Print
+  setPrintCopies: (copies: number) => void
+  setTransactionRef: (ref: string) => void
+  setSelectedFilter: (filter: string) => void
 }
 
 const generateSessionCode = () => {
@@ -103,17 +135,25 @@ const initialSession: BoothSession = {
   outletId: '',
   frameId: undefined,
   frame: undefined,
+  templateId: undefined,
+  template: undefined,
   photos: [],
-  status: 'idle',
-  countdownValue: 3,
+  status: 'payment',
+  countdownValue: 8,
   currentPhotoIndex: 0,
-  totalPhotos: 4,
+  totalPhotos: 3,
   mode: 'burst',
   totalPrice: 0,
   paymentMethod: null,
   paymentStatus: 'pending',
   galleryCode: undefined,
   isOffline: false,
+  customerPhone: undefined,
+  sessionTimer: 540, // 9 minutes
+  sessionTimerActive: false,
+  printCopies: 1,
+  selectedFilter: undefined,
+  transactionRef: undefined,
 }
 
 export const useBoothStore = create<BoothState>()(
@@ -130,7 +170,7 @@ export const useBoothStore = create<BoothState>()(
             id: crypto.randomUUID(),
             code: generateSessionCode(),
             outletId,
-            status: 'capturing',
+            status: 'payment',
           },
         })
       },
@@ -182,7 +222,7 @@ export const useBoothStore = create<BoothState>()(
         }))
       },
 
-      setPayment: (method: 'cash' | 'qris' | 'voucher') => {
+      setPayment: (method: 'qris' | 'voucher' | 'event') => {
         set((state) => ({
           session: {
             ...state.session,
@@ -207,12 +247,31 @@ export const useBoothStore = create<BoothState>()(
             ...state.session,
             status: 'completed',
             galleryCode,
+            sessionTimerActive: false,
           },
         }))
       },
 
       resetSession: () => {
         set({ session: initialSession })
+      },
+
+      setTemplateSelection: () => {
+        set((state) => ({
+          session: {
+            ...state.session,
+            status: 'template-selection',
+          },
+        }))
+      },
+
+      setPrinting: () => {
+        set((state) => ({
+          session: {
+            ...state.session,
+            status: 'printing',
+          },
+        }))
       },
 
       // Config Actions
@@ -227,6 +286,16 @@ export const useBoothStore = create<BoothState>()(
             frameId: frame.id,
             frame,
             totalPrice: frame.price,
+          },
+        }))
+      },
+
+      setTemplate: (template: Template) => {
+        set((state) => ({
+          session: {
+            ...state.session,
+            templateId: template.id,
+            template,
           },
         }))
       },
@@ -254,6 +323,77 @@ export const useBoothStore = create<BoothState>()(
           },
         }))
       },
+
+      // Timer Actions
+      startSessionTimer: () => {
+        set((state) => ({
+          session: {
+            ...state.session,
+            sessionTimerActive: true,
+            // Don't reset timer - continue from where it left off
+          },
+        }))
+      },
+
+      stopSessionTimer: () => {
+        set((state) => ({
+          session: {
+            ...state.session,
+            sessionTimerActive: false,
+          },
+        }))
+      },
+
+      decrementSessionTimer: () => {
+        set((state) => {
+          const newTimer = state.session.sessionTimer - 1
+          if (newTimer <= 0) {
+            // Timer expired - reset to payment
+            return {
+              session: {
+                ...initialSession,
+                outletId: state.session.outletId,
+                id: state.session.id,
+                code: state.session.code,
+              },
+            }
+          }
+          return {
+            session: {
+              ...state.session,
+              sessionTimer: newTimer,
+            },
+          }
+        })
+      },
+
+      // Print Actions
+      setPrintCopies: (copies: number) => {
+        set((state) => ({
+          session: {
+            ...state.session,
+            printCopies: copies,
+          },
+        }))
+      },
+
+      setTransactionRef: (ref: string) => {
+        set((state) => ({
+          session: {
+            ...state.session,
+            transactionRef: ref,
+          },
+        }))
+      },
+
+      setSelectedFilter: (filter: string) => {
+        set((state) => ({
+          session: {
+            ...state.session,
+            selectedFilter: filter,
+          },
+        }))
+      },
     }),
     {
       name: 'snapnext-booth-storage',
@@ -262,6 +402,8 @@ export const useBoothStore = create<BoothState>()(
           status: state.session.status,
           isOffline: state.session.isOffline,
           photos: state.session.photos,
+          sessionTimer: state.session.sessionTimer,
+          sessionTimerActive: state.session.sessionTimerActive,
         },
       }),
     }
@@ -277,6 +419,7 @@ interface PaymentState {
   qrisString: string | null
   qrisExpiry: Date | null
   qrisPolling: boolean
+  transactionRef: string | null
   
   // Voucher State
   voucherApplied: boolean
@@ -284,7 +427,7 @@ interface PaymentState {
   voucherCode: string | null
   
   // Actions
-  setQrisString: (qr: string, expiry: Date) => void
+  setQrisString: (qr: string, expiry: Date, transactionRef: string) => void
   clearQris: () => void
   setQrisPolling: (polling: boolean) => void
   applyVoucher: (code: string, discount: number) => void
@@ -295,16 +438,17 @@ export const usePaymentStore = create<PaymentState>((set) => ({
   qrisString: null,
   qrisExpiry: null,
   qrisPolling: false,
+  transactionRef: null,
   voucherApplied: false,
   voucherDiscount: 0,
   voucherCode: null,
 
-  setQrisString: (qr: string, expiry: Date) => {
-    set({ qrisString: qr, qrisExpiry: expiry })
+  setQrisString: (qr: string, expiry: Date, transactionRef: string) => {
+    set({ qrisString: qr, qrisExpiry: expiry, transactionRef })
   },
 
   clearQris: () => {
-    set({ qrisString: null, qrisExpiry: null, qrisPolling: false })
+    set({ qrisString: null, qrisExpiry: null, qrisPolling: false, transactionRef: null })
   },
 
   setQrisPolling: (polling: boolean) => {

@@ -241,7 +241,7 @@ export function DashboardOverview() {
           transition={{ delay: 0.5 }}
           className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
         >
-          <h2 className="text-lg font-semibold mb-4">Recent Transactions</h2>
+          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Recent Transactions</h2>
           <div className="space-y-4">
             {transactions.slice(0, 4).map((tx) => (
               <div key={tx.id} className="flex items-center justify-between py-2 border-b dark:border-gray-800 last:border-0">
@@ -252,7 +252,7 @@ export function DashboardOverview() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium">{formatPrice(tx.amount)}</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{formatPrice(tx.amount)}</p>
                   <span className={`text-xs px-2 py-1 rounded-full ${
                     tx.status === 'success' 
                       ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' 
@@ -273,7 +273,7 @@ export function DashboardOverview() {
           transition={{ delay: 0.6 }}
           className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
         >
-          <h2 className="text-lg font-semibold mb-4">Booth Status</h2>
+          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Booth Status</h2>
           <div className="space-y-4">
             {boothStatuses.map((booth) => (
               <div key={booth.id} className="flex items-center justify-between py-2 border-b dark:border-gray-800 last:border-0">
@@ -300,35 +300,35 @@ export function DashboardOverview() {
         transition={{ delay: 0.7 }}
         className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
       >
-        <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+        <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <button 
             onClick={() => useDashboardStore.getState().setActiveModule('outlets')}
             className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors"
           >
-            <Store className="w-8 h-8 text-gray-400" />
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Add Outlet</span>
+            <Store className="w-8 h-8 text-gray-400 dark:text-gray-300" />
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Add Outlet</span>
           </button>
           <button 
             onClick={() => useDashboardStore.getState().setActiveModule('vouchers')}
             className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors"
           >
-            <Gift className="w-8 h-8 text-gray-400" />
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Create Voucher</span>
+            <Gift className="w-8 h-8 text-gray-400 dark:text-gray-300" />
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Create Voucher</span>
           </button>
           <button 
             onClick={() => useDashboardStore.getState().setActiveModule('templates')}
             className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors"
           >
-            <Image className="w-8 h-8 text-gray-400" />
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Upload Template</span>
+            <Image className="w-8 h-8 text-gray-400 dark:text-gray-300" />
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Upload Template</span>
           </button>
           <button 
             onClick={() => useDashboardStore.getState().setActiveModule('testimonials')}
             className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors"
           >
-            <Users className="w-8 h-8 text-gray-400" />
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Add Testimonial</span>
+            <Users className="w-8 h-8 text-gray-400 dark:text-gray-300" />
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Add Testimonial</span>
           </button>
         </div>
       </motion.div>

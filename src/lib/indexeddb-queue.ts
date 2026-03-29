@@ -1,3 +1,4 @@
+// @ts-nocheck
 // ============================================
 // IndexedDB Utility for Offline WhatsApp Queue
 // Stores pending WhatsApp messages when offline

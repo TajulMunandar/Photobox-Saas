@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Plus, 
   Search, 
@@ -41,6 +41,22 @@ function OutletForm({ outlet, onClose, onSubmit }: OutletFormProps) {
     lastHeartbeat: outlet?.lastHeartbeat || new Date().toISOString()
   })
 
+  // Update form when outlet prop changes (for edit mode)
+  useEffect(() => {
+    setFormData({
+      name: outlet?.name || '',
+      location: outlet?.location || '',
+      mapsUrl: outlet?.mapsUrl || '',
+      status: outlet?.status || 'offline' as const,
+      features: {
+        qris: outlet?.features.qris ?? true,
+        voucher: outlet?.features.voucher ?? true,
+        cashless: outlet?.features.cashless ?? true,
+      },
+      lastHeartbeat: outlet?.lastHeartbeat || new Date().toISOString()
+    })
+  }, [outlet])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit(formData)
@@ -63,17 +79,17 @@ function OutletForm({ outlet, onClose, onSubmit }: OutletFormProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b dark:border-gray-800">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {outlet ? 'Edit Outlet' : 'Add New Outlet'}
           </h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
           <div>
-            <label className="block text-sm font-medium mb-1">Outlet Name</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Outlet Name</label>
             <input
               type="text"
               value={formData.name}
@@ -84,7 +100,7 @@ function OutletForm({ outlet, onClose, onSubmit }: OutletFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Location</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Location</label>
             <input
               type="text"
               value={formData.location}
@@ -95,22 +111,51 @@ function OutletForm({ outlet, onClose, onSubmit }: OutletFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Google Maps URL</label>
-            <input
-              type="url"
-              value={formData.mapsUrl}
-              onChange={(e) => setFormData({ ...formData, mapsUrl: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              required
-            />
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Pick Location on Map</label>
+            <div className="space-y-2">
+              <div className="relative w-full h-64 rounded-lg overflow-hidden border dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
+                <iframe
+                  id="map-embed"
+                  className="w-full h-full"
+                  src={formData.mapsUrl || "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d126748.56398935027!2d106.698688671875!3d-6.208763868808566!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f5390917b5c7%3A0x2e69f5390917b5c7!2sJakarta!5e0!3m2!1sen!2sid!4v1620000000000!5m2!1sen!2sid"}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  window.open('https://www.google.com/maps', '_blank')
+                }}
+                className="w-full px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 flex items-center justify-center gap-2"
+              >
+                <MapPin className="w-4 h-4" />
+                Open Google Maps to Select Location
+              </button>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                1. Click button above to open Google Maps{String.fromCharCode(10)}
+                2. Navigate to your desired location{String.fromCharCode(10)}
+                3. Click Share {'->'} Embed a map{String.fromCharCode(10)}
+                4. Copy the src URL and paste below
+              </p>
+              <input
+                type="url"
+                value={formData.mapsUrl}
+                onChange={(e) => setFormData({ ...formData, mapsUrl: e.target.value })}
+                placeholder="Paste Google Maps embed URL here..."
+                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                required
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Status</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Status</label>
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as 'online' | 'offline' | 'error' })}
-              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
               <option value="online">Online</option>
               <option value="offline">Offline</option>
@@ -119,7 +164,7 @@ function OutletForm({ outlet, onClose, onSubmit }: OutletFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Features</label>
+            <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">Features</label>
             <div className="space-y-2">
               <label className="flex items-center gap-2">
                 <input
@@ -131,7 +176,7 @@ function OutletForm({ outlet, onClose, onSubmit }: OutletFormProps) {
                   })}
                   className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                 />
-                <span className="text-sm">QRIS Payment</span>
+                <span className="text-sm text-gray-900 dark:text-white">QRIS Payment</span>
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -143,7 +188,7 @@ function OutletForm({ outlet, onClose, onSubmit }: OutletFormProps) {
                   })}
                   className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                 />
-                <span className="text-sm">Voucher</span>
+                <span className="text-sm text-gray-900 dark:text-white">Voucher</span>
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -155,7 +200,7 @@ function OutletForm({ outlet, onClose, onSubmit }: OutletFormProps) {
                   })}
                   className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                 />
-                <span className="text-sm">Cashless Payment</span>
+                <span className="text-sm text-gray-900 dark:text-white">Cashless Payment</span>
               </label>
             </div>
           </div>
@@ -166,7 +211,7 @@ function OutletForm({ outlet, onClose, onSubmit }: OutletFormProps) {
               onClick={onClose}
               className="flex-1 px-4 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
-              Cancel
+              <span className="text-gray-900 dark:text-white">Cancel</span>
             </button>
             <button
               type="submit"
@@ -255,7 +300,7 @@ export function OutletModule() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-300" />
         <input
           type="text"
           placeholder="Search outlets..."
@@ -315,15 +360,15 @@ export function OutletModule() {
                 }}
                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
               >
-                <Edit className="w-4 h-4" />
-                Edit
+                <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                <span className="text-gray-900 dark:text-white">Edit</span>
               </button>
               <button
                 onClick={() => setDeleteConfirm(outlet.id)}
                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg border dark:border-gray-700 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 text-sm"
               >
-                <Trash2 className="w-4 h-4" />
-                Delete
+                <Trash2 className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                <span className="text-gray-900 dark:text-white">Delete</span>
               </button>
             </div>
           </motion.div>
@@ -368,7 +413,7 @@ export function OutletModule() {
               className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-sm p-6"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-semibold mb-2">Delete Outlet?</h3>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Delete Outlet?</h3>
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 This action cannot be undone. Are you sure you want to delete this outlet?
               </p>
