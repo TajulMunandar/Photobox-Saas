@@ -1,6 +1,5 @@
-import { prisma } from '@/lib/prisma'
-
 export async function GET(req: Request) {
+  const { prisma } = await import('@/lib/prisma')
   const url = new URL(req.url)
   const outletId = url.searchParams.get('outletId')
 

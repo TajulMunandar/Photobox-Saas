@@ -1,4 +1,3 @@
-import { prisma } from '@/lib/prisma'
 import { getAuth } from '@/lib/auth'
 
 // FUNGSI UPDATE USER
@@ -7,6 +6,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const auth = getAuth(req)
     const body = await req.json()
     const voucherId = params.id
@@ -104,6 +104,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const auth = getAuth(req)
     const voucherId = params.id
     const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'

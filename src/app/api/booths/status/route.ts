@@ -1,7 +1,7 @@
-import { prisma } from '@/lib/prisma'
 import { getAuth } from '@/lib/auth'
 
 export async function GET(req: Request) {
+  const { prisma } = await import('@/lib/prisma')
   const auth = getAuth(req)
   const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'
   const url = new URL(req.url)

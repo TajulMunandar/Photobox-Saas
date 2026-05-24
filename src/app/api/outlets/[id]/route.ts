@@ -1,4 +1,3 @@
-import { prisma } from '@/lib/prisma'
 import { getAuth } from '@/lib/auth'
 
 // FUNGSI GET SINGLE OUTLET (with config + recent heartbeats)
@@ -6,6 +5,7 @@ export async function GET(
   req: Request,
   { params }: { params: { id: string } }
 ) {
+  const { prisma } = await import('@/lib/prisma')
   const auth = getAuth(req)
   const outletId = params.id
   // Allow SUPER_ADMIN or unauthenticated dev access (for multi-tenant management UI)
@@ -79,6 +79,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const auth = getAuth(req)
     const body = await req.json()
     const outletId = params.id
@@ -181,6 +182,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const body = await req.json()
     const outletId = params.id
 
@@ -212,6 +214,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const auth = getAuth(req)
     const outletId = params.id
 

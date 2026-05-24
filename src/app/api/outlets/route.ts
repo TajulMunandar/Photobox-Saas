@@ -1,9 +1,9 @@
-import { prisma } from '@/lib/prisma'
 import { getAuth } from '@/lib/auth' // nanti bikin
 
 
 // FUNGSI GET DATA OUTLET
 export async function GET(req: Request) {
+  const { prisma } = await import('@/lib/prisma')
   const auth = getAuth(req)
   const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'
   const url = new URL(req.url)
@@ -52,6 +52,7 @@ export async function GET(req: Request) {
 // FUNGSI CREATE OUTLET
 export async function POST(req: Request) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const auth = getAuth(req)
     const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'
     const body = await req.json()

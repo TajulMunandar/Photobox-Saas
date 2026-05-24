@@ -1,4 +1,3 @@
-import { prisma } from '@/lib/prisma'
 import { getAuth } from '@/lib/auth'
 
 export async function PUT(
@@ -6,6 +5,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const auth = getAuth(req)
     const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'
     const tenantId = params.id
@@ -51,6 +51,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const auth = getAuth(req)
     const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'
     const tenantId = params.id

@@ -1,4 +1,3 @@
-import { prisma } from '@/lib/prisma'
 import { getAuth } from '@/lib/auth'
 
 // FUNGSI UPDATE testimonial
@@ -8,6 +7,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const auth = getAuth(req)
     const body = await req.json()
     const testimonialId = params.id
@@ -120,6 +120,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const auth = getAuth(req)
     const testimonialId = params.id
 

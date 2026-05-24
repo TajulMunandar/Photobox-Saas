@@ -1,9 +1,9 @@
-import { prisma } from '@/lib/prisma'
 import { getAuth } from '@/lib/auth' // nanti bikin
 
 
 // FUNGSI GET DATA Testimonial
 export async function GET(req: Request) {
+  const { prisma } = await import('@/lib/prisma')
   const auth = getAuth(req)
   const url = new URL(req.url)
   const outletId = url.searchParams.get('outletId')
@@ -51,6 +51,7 @@ export async function GET(req: Request) {
 // FUNGSI CREATE Testimonial
 export async function POST(req: Request) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const auth = getAuth(req)
     const body = await req.json()
 

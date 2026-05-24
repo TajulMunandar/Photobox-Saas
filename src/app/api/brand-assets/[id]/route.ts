@@ -1,10 +1,10 @@
-import { prisma } from '@/lib/prisma'
 import { getAuth } from '@/lib/auth'
 
 export async function PUT(
   req: Request,
   { params }: { params: { id: string } }
 ) {
+  const { prisma } = await import('@/lib/prisma')
   const body = await req.json()
   const assetId = params.id
 
@@ -28,6 +28,7 @@ export async function DELETE(
   req: Request,
   { params }: { params: { id: string } }
 ) {
+  const { prisma } = await import('@/lib/prisma')
   const assetId = params.id
 
   try {
