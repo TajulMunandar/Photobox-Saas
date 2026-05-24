@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
+import { useState, useEffect } from 'react'
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
   Gift,
   Percent,
   DollarSign,
@@ -17,6 +17,7 @@ import {
 import { useDashboardStore, Voucher } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
+import { UsageType } from '@prisma/client'
 
 // ============================================
 // Voucher Form Component
@@ -30,6 +31,8 @@ interface VoucherFormProps {
 
 function VoucherForm({ voucher, onClose, onSubmit }: VoucherFormProps) {
   const [formData, setFormData] = useState({
+    // code: voucher?.code || '',
+    usageType: voucher?.usageType || 'SINGLE_USE' as const,
     discountType: voucher?.discountType || 'percentage' as const,
     discountValue: voucher?.discountValue || 0,
     minPurchase: voucher?.minPurchase || 0,
@@ -100,6 +103,18 @@ function VoucherForm({ voucher, onClose, onSubmit }: VoucherFormProps) {
               min="0"
               max={formData.discountType === 'percentage' ? 100 : undefined}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Usage Type</label>
+            <select
+              value={formData.usageType}
+              onChange={(e) => setFormData({ ...formData, usageType: e.target.value as 'SINGLE_USE' | 'MULTI_USE' })}
+              className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="SINGLE_USE">Single Use</option>
+              <option value="MULTI_USE">Multi Use</option>
+            </select>
           </div>
 
           <div>
@@ -207,30 +222,97 @@ export function VoucherModule() {
   const [filterStatus, setFilterStatus] = useState<string>('all')
 
   const filteredVouchers = vouchers.filter(voucher => {
-    const matchesSearch = voucher.code.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = filterStatus === 'all' || 
+    const matchesSearch = (voucher.code || '').toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesStatus = filterStatus === 'all' ||
       (filterStatus === 'active' && voucher.isActive) ||
       (filterStatus === 'inactive' && !voucher.isActive)
     return matchesSearch && matchesStatus
   })
 
-  const handleCreate = (data: Omit<Voucher, 'id' | 'createdAt' | 'code' | 'usedCount'>) => {
-    addVoucher(data)
-    toast.success('Voucher created successfully!')
-  }
+  const handleCreate = async (data: Omit<Voucher, 'id' | 'createdAt' | 'code' | 'usedCount'>) => {
+    try {
+      const res = await fetch('/api/vouchers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
 
-  const handleUpdate = (data: Omit<Voucher, 'id' | 'createdAt' | 'code' | 'usedCount'>) => {
-    if (editingVoucher) {
-      updateVoucher(editingVoucher.id, data)
-      toast.success('Voucher updated successfully!')
+      const result = await res.json()
+
+      if (!res.ok) {
+        throw new Error(result.message || 'Failed to create voucher')
+      }
+
+      const refresh = await fetch('/api/vouchers')
+      const freshData = await refresh.json()
+
+      useDashboardStore.getState().setVouchers(freshData)
+
+      toast.success('Voucher created successfully!')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create voucher')
     }
   }
 
-  const handleDelete = (id: string) => {
-    deleteVoucher(id)
-    setDeleteConfirm(null)
-    toast.success('Voucher deleted successfully!')
+  useEffect(() => {
+    const fetchVouchers = async () => {
+      const res = await fetch('/api/vouchers')
+      const data = await res.json()
+
+      useDashboardStore.getState().setVouchers(data)
+    }
+
+    fetchVouchers()
+  }, [])
+
+  const handleUpdate = async (data: Omit<Voucher, 'id' | 'createdAt' | 'code' | 'usedCount'>) => {
+    if (!editingVoucher) return
+
+    try {
+      const res = await fetch(`/api/vouchers/${editingVoucher.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
+
+      const result = await res.json()
+
+      if (!res.ok) {
+        throw new Error(result.message || 'Failed to update voucher')
+      }
+
+
+      const refresh = await fetch('/api/vouchers')
+      const fresh = await refresh.json()
+
+      useDashboardStore.getState().setVouchers(fresh)
+
+      toast.success('Voucher updated successfully!')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update voucher')
+    }
   }
+
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/vouchers/${id}`, {
+        method: 'DELETE',
+      })
+  
+      if (!res.ok) throw new Error()
+  
+      deleteVoucher(id) 
+      setDeleteConfirm(null)
+      toast.success('voucher deleted successfully!')
+    } catch (err) {
+      toast.error('Failed to delete voucher')
+    }
+  }
+  
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code)
@@ -322,7 +404,7 @@ export function VoucherModule() {
                 <DollarSign className="w-4 h-4 text-green-500" />
               )}
               <span className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {voucher.discountType === 'percentage' 
+                {voucher.discountType === 'percentage'
                   ? `${voucher.discountValue}%`
                   : formatPrice(voucher.discountValue)
                 }
@@ -351,11 +433,10 @@ export function VoucherModule() {
             </div>
 
             <div className="flex items-center justify-between mb-4">
-              <span className={`text-xs px-2 py-1 rounded-full ${
-                voucher.isActive
+              <span className={`text-xs px-2 py-1 rounded-full ${voucher.isActive
                   ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
                   : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-              }`}>
+                }`}>
                 {voucher.isActive ? 'Active' : 'Inactive'}
               </span>
             </div>

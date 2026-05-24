@@ -241,22 +241,86 @@ export function OutletModule() {
     outlet.location.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handleCreate = (data: Omit<Outlet, 'id' | 'createdAt'>) => {
-    addOutlet(data)
-    toast.success('Outlet created successfully!')
-  }
+  const handleCreate = async (data: Omit<Outlet, 'id' | 'createdAt'>) => {
+    try {
+      const res = await fetch('/api/outlets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
+  
+      const result = await res.json()
+  
+   
+      if (!res.ok) {
+        throw new Error(result.message || 'Failed to create outlet')
+      }
+      const refresh = await fetch('/api/outlets')
+      const freshData = await refresh.json()
 
-  const handleUpdate = (data: Omit<Outlet, 'id' | 'createdAt'>) => {
-    if (editingOutlet) {
-      updateOutlet(editingOutlet.id, data)
-      toast.success('Outlet updated successfully!')
+      useDashboardStore.getState().setOutlets(freshData)
+      toast.success('Outlet created successfully!')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create outlet')
     }
   }
 
-  const handleDelete = (id: string) => {
-    deleteOutlet(id)
-    setDeleteConfirm(null)
-    toast.success('Outlet deleted successfully!')
+  useEffect(() => {
+    const fetchOutlets = async () => {
+      const res = await fetch('/api/outlets')
+      const data = await res.json()
+  
+      useDashboardStore.getState().setOutlets(data)
+    }
+  
+    fetchOutlets()
+  }, [])
+
+  const handleUpdate = async (data: Omit<Outlet, 'id' | 'createdAt'>) => {
+    if (!editingOutlet) return 
+
+    try {
+      const res = await fetch(`/api/outlets/${editingOutlet.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
+  
+      const result = await res.json()
+  
+      // 🔥 WAJIB
+      if (!res.ok) {
+        throw new Error(result.message || 'Failed to update outlet')
+      }
+  
+      const refresh = await fetch('/api/outlets')
+      const freshData = await refresh.json()
+
+      useDashboardStore.getState().setOutlets(freshData)
+      toast.success('Outlet updated successfully!')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update outlet')
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/outlets/${id}`, {
+        method: 'DELETE',
+      })
+  
+      if (!res.ok) throw new Error()
+  
+      deleteOutlet(id) 
+      setDeleteConfirm(null)
+      toast.success('Outlet deleted successfully!')
+    } catch (err) {
+      toast.error('Failed to delete outlet')
+    }
   }
 
   const getStatusIcon = (status: string) => {

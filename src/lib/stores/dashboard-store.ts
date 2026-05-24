@@ -42,6 +42,7 @@ export interface User {
 export interface Voucher {
   id: string
   code: string
+  usageType: 'SINGLE_USE' | 'MULTI_USE'
   discountType: 'percentage' | 'fixed'
   discountValue: number
   minPurchase: number
@@ -115,6 +116,7 @@ interface DashboardState {
   addOutlet: (outlet: Omit<Outlet, 'id' | 'createdAt'>) => void
   updateOutlet: (id: string, data: Partial<Outlet>) => void
   deleteOutlet: (id: string) => void
+  setOutlets: (outlets: Outlet[]) => void
   
   // Actions - Templates
   addTemplate: (template: Omit<Template, 'id' | 'createdAt'>) => void
@@ -125,16 +127,22 @@ interface DashboardState {
   addUser: (user: Omit<User, 'id' | 'createdAt'>) => void
   updateUser: (id: string, data: Partial<User>) => void
   deleteUser: (id: string) => void
+  setUsers: (user: User[]) => void
+
   
   // Actions - Vouchers
   addVoucher: (voucher: Omit<Voucher, 'id' | 'createdAt' | 'code' | 'usedCount'>) => void
   updateVoucher: (id: string, data: Partial<Voucher>) => void
   deleteVoucher: (id: string) => void
+  setVouchers: (voucher: Voucher[]) => void
+
   
   // Actions - Testimonials
   addTestimonial: (testimonial: Omit<Testimonial, 'id' | 'createdAt'>) => void
   updateTestimonial: (id: string, data: Partial<Testimonial>) => void
   deleteTestimonial: (id: string) => void
+  setTestimonials: (testimonial: Testimonial[]) => void
+
   
   // Actions - Branding
   updateBranding: (data: Partial<Branding>) => void
@@ -256,6 +264,7 @@ const mockVouchers: Voucher[] = [
   {
     id: '1',
     code: 'WELCOME2024',
+    usageType: 'SINGLE_USE',
     discountType: 'percentage',
     discountValue: 20,
     minPurchase: 50000,
@@ -270,6 +279,7 @@ const mockVouchers: Voucher[] = [
   {
     id: '2',
     code: 'HOLIDAY50K',
+    usageType: 'SINGLE_USE',
     discountType: 'fixed',
     discountValue: 50000,
     minPurchase: 100000,
@@ -428,6 +438,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   deleteOutlet: (id) => set((state) => ({
     outlets: state.outlets.filter((o) => o.id !== id)
   })),
+
+  setOutlets: (outlets) => set({ outlets }),
   
   // Templates Actions
   addTemplate: (template) => set((state) => ({
@@ -454,6 +466,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   deleteUser: (id) => set((state) => ({
     users: state.users.filter((u) => u.id !== id)
   })),
+
+  setUsers: (users) => set({ users }),
+
   
   // Vouchers Actions
   addVoucher: (voucher) => set((state) => ({
@@ -474,6 +489,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     vouchers: state.vouchers.filter((v) => v.id !== id)
   })),
   
+  setVouchers: (vouchers) => set({ vouchers }),
+
+
   // Testimonials Actions
   addTestimonial: (testimonial) => set((state) => ({
     testimonials: [...state.testimonials, { ...testimonial, id: generateId(), createdAt: new Date().toISOString() }]
@@ -486,6 +504,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   deleteTestimonial: (id) => set((state) => ({
     testimonials: state.testimonials.filter((t) => t.id !== id)
   })),
+  setTestimonials: (testimonials) => set({ testimonials }),
   
   // Branding Actions
   updateBranding: (data) => set((state) => ({

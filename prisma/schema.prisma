@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================
@@ -15,23 +16,23 @@ datasource db {
 // ============================================
 
 model Tenant {
-  id                 String        @id @default(uuid())
-  name               String        @db.VarChar(255)
-  email              String        @unique @db.VarChar(255)
-  phone              String?       @db.VarChar(20)
-  logoUrl            String?       @db.Text
-  primaryColor      String        @default("#0ea5e9") @db.VarChar(7)
-  subscriptionPlan  SubscriptionPlan @default(FREE)
-  isActive           Boolean       @default(true)
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  id               String           @id @default(uuid())
+  name             String           @db.VarChar(255)
+  email            String           @unique @db.VarChar(255)
+  phone            String?          @db.VarChar(20)
+  logoUrl          String?          @db.Text
+  primaryColor     String           @default("#0ea5e9") @db.VarChar(7)
+  subscriptionPlan SubscriptionPlan @default(FREE)
+  isActive         Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
-  users              User[]
-  outlets            Outlet[]
-  frameTemplates     FrameTemplate[]
-  vouchers           Voucher[]
-  testimonials       Testimonial[]
-  brandAssets        BrandAsset[]
+  users          User[]
+  outlets        Outlet[]
+  frameTemplates FrameTemplate[]
+  vouchers       Voucher[]
+  testimonials   Testimonial[]
+  brandAssets    BrandAsset[]
 }
 
 enum SubscriptionPlan {
@@ -46,42 +47,44 @@ enum SubscriptionPlan {
 // ============================================
 
 model Outlet {
-  id           String        @id @default(uuid())
-  tenantId     String
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name         String        @db.VarChar(255)
-  address      String        @db.Text
-  phone        String?       @db.VarChar(20)
-  latitude     Decimal?     @db.Decimal(10, 8)
-  longitude    Decimal?     @db.Decimal(11, 8)
-  operatingHours Json?      // {"monday": "09:00-21:00", ...}
-  isActive     Boolean       @default(true)
-  machineId    String        @unique @db.VarChar(50) // Unique booth identifier
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id             String   @id @default(uuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name           String   @db.VarChar(255)
+  address        String   @db.Text
+  phone          String?  @db.VarChar(20)
+  mapsUrl        String?  @db.Text
+  latitude       Decimal? @db.Decimal(10, 8)
+  longitude      Decimal? @db.Decimal(11, 8)
+  operatingHours Json? // {"monday": "09:00-21:00", ...}
+  isActive       Boolean  @default(true)
+  machineId      String   @unique @db.VarChar(50) // Unique booth identifier
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   config       OutletConfig?
   sessions     SessionPhoto[]
   transactions Transaction[]
   heartbeats   BoothHeartbeat[]
   testimonials Testimonial[]
+  users        User[]
 
   @@index([tenantId])
   @@index([machineId])
 }
 
 model OutletConfig {
-  id              String   @id @default(uuid())
-  outletId        String   @unique
-  outlet          Outlet   @relation(fields: [outletId], references: [id], onDelete: Cascade)
-  paymentMethods  Json     @default("{\"cash\": true, \"qris\": true, \"voucher\": true}")
-  priceDefault    Decimal  @default(0) @db.Decimal(10, 2)
-  printEnabled    Boolean  @default(true)
-  galleryEnabled  Boolean  @default(true)
-  gifEnabled      Boolean  @default(true)
-  newspaperEnabled Boolean @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String   @id @default(uuid())
+  outletId         String   @unique
+  outlet           Outlet   @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  paymentMethods   Json     @default("{\"cash\": true, \"qris\": true, \"voucher\": true}")
+  priceDefault     Decimal  @default(0) @db.Decimal(10, 2)
+  printEnabled     Boolean  @default(true)
+  galleryEnabled   Boolean  @default(true)
+  gifEnabled       Boolean  @default(true)
+  newspaperEnabled Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 // ============================================
@@ -89,19 +92,19 @@ model OutletConfig {
 // ============================================
 
 model User {
-  id           String        @id @default(uuid())
+  id           String    @id @default(uuid())
   tenantId     String
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   outletId     String?
-  outlet       Outlet?       @relation(fields: [outletId], references: [id])
-  email        String        @unique @db.VarChar(255)
-  passwordHash String        @db.VarChar(255)
-  name         String        @db.VarChar(255)
+  outlet       Outlet?   @relation(fields: [outletId], references: [id])
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @db.VarChar(255)
+  name         String    @db.VarChar(255)
   role         UserRole
-  isActive     Boolean       @default(true)
+  isActive     Boolean   @default(true)
   lastLogin    DateTime?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([tenantId])
   @@index([outletId])
@@ -119,29 +122,29 @@ enum UserRole {
 // ============================================
 
 model FrameTemplate {
-  id           String        @id @default(uuid())
+  id           String    @id @default(uuid())
   tenantId     String
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name         String        @db.VarChar(255)
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name         String    @db.VarChar(255)
   type         FrameType
-  imageUrl     String        @db.Text
-  thumbnailUrl String?       @db.Text
+  imageUrl     String    @db.Text
+  thumbnailUrl String?   @db.Text
   width        Int
   height       Int
-  price        Decimal       @default(0) @db.Decimal(10, 2)
-  isActive     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  price        Decimal   @default(0) @db.Decimal(10, 2)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  sessions     SessionPhoto[]
+  sessions SessionPhoto[]
 
   @@index([tenantId])
 }
 
 enum FrameType {
-  FOUR_R        // 4R Standard
-  A4_NEWSPAPER  // A4 Newspaper layout
-  CUSTOM        // Custom size
+  FOUR_R // 4R Standard
+  A4_NEWSPAPER // A4 Newspaper layout
+  CUSTOM // Custom size
 }
 
 // ============================================
@@ -149,27 +152,27 @@ enum FrameType {
 // ============================================
 
 model SessionPhoto {
-  id              String          @id @default(uuid())
-  outletId        String
-  outlet          Outlet          @relation(fields: [outletId], references: [id], onDelete: Cascade)
-  frameId         String?
-  frame           FrameTemplate? @relation(fields: [frameId], references: [id])
-  sessionCode     String          @unique @db.VarChar(20)
-  status          SessionStatus  @default(CAPTURING)
-  photos          Json            // Array of photo URLs/Base64
-  gifUrl          String?         @db.Text
-  newspaperUrl    String?         @db.Text
-  totalPrice      Decimal         @default(0) @db.Decimal(10, 2)
-  paymentMethod   PaymentMethod?
-  paymentStatus   PaymentStatus   @default(PENDING)
-  paymentRef      String?         @db.VarChar(100)
-  voucherCode     String?         @db.VarChar(50)
-  galleryCode     String          @unique @db.VarChar(20)
+  id               String         @id @default(uuid())
+  outletId         String
+  outlet           Outlet         @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  frameId          String?
+  frame            FrameTemplate? @relation(fields: [frameId], references: [id])
+  sessionCode      String         @unique @db.VarChar(20)
+  status           SessionStatus  @default(CAPTURING)
+  photos           Json // Array of photo URLs/Base64
+  gifUrl           String?        @db.Text
+  newspaperUrl     String?        @db.Text
+  totalPrice       Decimal        @default(0) @db.Decimal(10, 2)
+  paymentMethod    PaymentMethod?
+  paymentStatus    PaymentStatus  @default(PENDING)
+  paymentRef       String?        @db.VarChar(100)
+  voucherCode      String?        @db.VarChar(50)
+  galleryCode      String         @unique @db.VarChar(20)
   galleryExpiresAt DateTime?
-  createdAt      DateTime        @default(now())
-  completedAt    DateTime?
+  createdAt        DateTime       @default(now())
+  completedAt      DateTime?
 
-  transaction    Transaction?
+  transaction Transaction?
 
   @@index([outletId, status])
   @@index([sessionCode])
@@ -202,21 +205,22 @@ enum PaymentStatus {
 // ============================================
 
 model Voucher {
-  id           String        @id @default(uuid())
-  tenantId     String
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  code         String        @unique @db.VarChar(50)
-  type         VoucherType
-  value        Decimal       @db.Decimal(10, 2)
-  minOrder     Decimal       @default(0) @db.Decimal(10, 2)
-  maxUses      Int?
-  usedCount    Int           @default(0)
-  usageType    UsageType
-  validFrom    DateTime
-  validUntil   DateTime
-  isActive     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id         String      @id @default(uuid())
+  tenantId   String
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code       String      @unique @db.VarChar(50)
+  type       VoucherType
+  value      Decimal     @db.Decimal(10, 2)
+  minOrder   Decimal     @default(0) @db.Decimal(10, 2)
+  maxDiscount Decimal?   @db.Decimal(10,2)
+  maxUses    Int?
+  usedCount  Int         @default(0)
+  usageType  UsageType
+  validFrom  DateTime
+  validUntil DateTime
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
   @@index([tenantId])
   @@index([code])
@@ -237,19 +241,19 @@ enum UsageType {
 // ============================================
 
 model Transaction {
-  id              String          @id @default(uuid())
-  outletId        String
-  outlet          Outlet          @relation(fields: [outletId], references: [id], onDelete: Cascade)
-  sessionId       String          @unique
-  session         SessionPhoto    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  amount          Decimal          @db.Decimal(10, 2)
-  paymentMethod   PaymentMethod
-  paymentGateway  PaymentGateway?
-  transactionRef  String?         @db.VarChar(100)
-  qrisString      String?         @db.Text // Dynamic QRIS
-  status          TransactionStatus @default(PENDING)
-  createdAt       DateTime        @default(now())
-  paidAt          DateTime?
+  id             String            @id @default(uuid())
+  outletId       String
+  outlet         Outlet            @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  sessionId      String            @unique
+  session        SessionPhoto      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  amount         Decimal           @db.Decimal(10, 2)
+  paymentMethod  PaymentMethod
+  paymentGateway PaymentGateway?
+  transactionRef String?           @db.VarChar(100)
+  qrisString     String?           @db.Text // Dynamic QRIS
+  status         TransactionStatus @default(PENDING)
+  createdAt      DateTime          @default(now())
+  paidAt         DateTime?
 
   @@index([outletId, createdAt])
 }
@@ -272,17 +276,17 @@ enum TransactionStatus {
 // ============================================
 
 model BoothHeartbeat {
-  id            String        @id @default(uuid())
-  machineId     String        @db.VarChar(50)
+  id            String      @id @default(uuid())
+  machineId     String      @db.VarChar(50)
   outletId      String
-  outlet        Outlet        @relation(fields: [outletId], references: [id], onDelete: Cascade)
-  status        BoothStatus   @default(ONLINE)
-  cpuUsage      Decimal?      @db.Decimal(5, 2)
-  memoryUsage   Decimal?      @db.Decimal(5, 2)
-  diskUsage     Decimal?      @db.Decimal(5, 2)
+  outlet        Outlet      @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  status        BoothStatus @default(ONLINE)
+  cpuUsage      Decimal?    @db.Decimal(5, 2)
+  memoryUsage   Decimal?    @db.Decimal(5, 2)
+  diskUsage     Decimal?    @db.Decimal(5, 2)
   lastPhotoTime DateTime?
   lastSeen      DateTime
-  createdAt     DateTime      @default(now())
+  createdAt     DateTime    @default(now())
 
   @@index([machineId, lastSeen])
   @@index([outletId])
@@ -299,17 +303,17 @@ enum BoothStatus {
 // ============================================
 
 model GalleryQueue {
-  id           String        @id @default(uuid())
+  id           String      @id @default(uuid())
   sessionId    String
   type         GalleryType
-  localPath    String        @db.Text
-  cloudUrl     String?       @db.Text
-  status       QueueStatus   @default(PENDING)
-  retryCount   Int           @default(0)
-  maxRetries   Int           @default(3)
-  errorMessage String?       @db.Text
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  localPath    String      @db.Text
+  cloudUrl     String?     @db.Text
+  status       QueueStatus @default(PENDING)
+  retryCount   Int         @default(0)
+  maxRetries   Int         @default(3)
+  errorMessage String?     @db.Text
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 }
 
 enum GalleryType {
@@ -330,17 +334,17 @@ enum QueueStatus {
 // ============================================
 
 model Testimonial {
-  id            String        @id @default(uuid())
+  id            String   @id @default(uuid())
   tenantId      String
-  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   outletId      String?
-  outlet        Outlet?       @relation(fields: [outletId], references: [id])
-  customerName  String        @db.VarChar(255)
-  customerPhoto String?       @db.Text
-  message       String        @db.Text
-  rating        Int           // 1-5
-  isApproved    Boolean       @default(false)
-  createdAt     DateTime      @default(now())
+  outlet        Outlet?  @relation(fields: [outletId], references: [id])
+  customerName  String   @db.VarChar(255)
+  customerPhoto String?  @db.Text
+  message       String   @db.Text
+  rating        Int // 1-5
+  isApproved    Boolean  @default(false)
+  createdAt     DateTime @default(now())
 
   @@index([tenantId])
 }
@@ -350,14 +354,14 @@ model Testimonial {
 // ============================================
 
 model BrandAsset {
-  id        String        @id @default(uuid())
+  id        String    @id @default(uuid())
   tenantId  String
-  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   type      AssetType
-  url       String        @db.Text
-  isActive  Boolean       @default(true)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  url       String    @db.Text
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([tenantId])
 }
@@ -378,7 +382,7 @@ model ApiKey {
   key         String    @unique @db.VarChar(100)
   outletId    String
   name        String    @db.VarChar(100)
-  permissions Json      // Array of permissions
+  permissions Json // Array of permissions
   isActive    Boolean   @default(true)
   expiresAt   DateTime?
   createdAt   DateTime  @default(now())

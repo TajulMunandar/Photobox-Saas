@@ -264,7 +264,7 @@ export default function HomePage() {
           >
             <StatCard 
               icon={ImageIcon}
-              value={stats.photos.toLocaleString()}
+              value={stats.photos.toLocaleString('id-ID')}
               label="Photos Captured"
               color={branding.primaryColor}
             />
@@ -276,7 +276,7 @@ export default function HomePage() {
             />
             <StatCard 
               icon={Users}
-              value={stats.users.toLocaleString()}
+              value={stats.users.toLocaleString('id-ID')}
               label="Happy Users"
               color={branding.primaryColor}
             />

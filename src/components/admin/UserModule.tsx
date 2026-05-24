@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState , useEffect} from 'react'
 import { 
   Plus, 
   Search, 
@@ -33,7 +33,7 @@ function UserForm({ user, onClose, onSubmit }: UserFormProps) {
     email: user?.email || '',
     role: user?.role || 'staff' as const,
     outletId: user?.outletId || '',
-    status: user?.status || 'active' as const
+    status: user?.status || 'active'
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -164,28 +164,95 @@ export function UserModule() {
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      (user.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (user.email || '').toLowerCase().includes(searchQuery.toLowerCase())
+  
     const matchesRole = filterRole === 'all' || user.role === filterRole
+  
     return matchesSearch && matchesRole
   })
 
-  const handleCreate = (data: Omit<User, 'id' | 'createdAt'>) => {
-    addUser(data)
-    toast.success('User created successfully!')
-  }
+  const handleCreate = async (data: Omit<User, 'id' | 'createdAt'>) => {
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
+  
+      const result = await res.json()
 
-  const handleUpdate = (data: Omit<User, 'id' | 'createdAt'>) => {
-    if (editingUser) {
-      updateUser(editingUser.id, data)
-      toast.success('User updated successfully!')
+      if (!res.ok) {
+        throw new Error(result.message || 'Failed to create user')
+      }
+
+      const refresh = await fetch('/api/users')
+      const freshData = await refresh.json()
+
+      useDashboardStore.getState().setUsers(freshData)
+
+      toast.success('User created successfully!')
+    } catch (err) {
+      toast.error('Failed to create User')
     }
   }
 
-  const handleDelete = (id: string) => {
-    deleteUser(id)
-    setDeleteConfirm(null)
-    toast.success('User deleted successfully!')
+   useEffect(() => {
+      const fetchUsers = async () => {
+        const res = await fetch('/api/users')
+        const data = await res.json()
+    
+        useDashboardStore.getState().setUsers(data)
+      }
+    
+      fetchUsers()
+    }, [])
+
+ const handleUpdate = async (data: Omit<User, 'id' | 'createdAt'>) => {
+     if (!editingUser) return 
+ 
+     try {
+       const res = await fetch(`/api/users/${editingUser.id}`, {
+         method: 'PUT',
+         headers: {
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify(data),
+       })
+ 
+       const result = await res.json()
+       
+       if (!res.ok) {
+        throw new Error(result.message || 'Failed to create user')
+      }
+
+      const refresh = await fetch('/api/users')
+      const freshData = await refresh.json()
+
+      useDashboardStore.getState().setUsers(freshData)
+
+       toast.success('Outlet updated successfully!')
+     } catch (err) {
+         toast.error('Failed to update outlet')
+     }
+   }
+
+   const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/users/${id}`, {
+        method: 'DELETE',
+      })
+  
+      if (!res.ok) throw new Error()
+  
+      deleteUser(id) 
+      setDeleteConfirm(null)
+      toast.success('Outlet deleted successfully!')
+    } catch (err) {
+      toast.error('Failed to delete outlet')
+    }
   }
 
   const getRoleBadge = (role: string) => {

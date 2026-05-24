@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Plus, 
   Search, 
@@ -181,32 +181,147 @@ export function TestimonialModule() {
     return matchesSearch && matchesStatus
   })
 
-  const handleCreate = (data: Omit<Testimonial, 'id' | 'createdAt'>) => {
-    addTestimonial(data)
-    toast.success('Testimonial added successfully!')
-  }
-
-  const handleUpdate = (data: Omit<Testimonial, 'id' | 'createdAt'>) => {
-    if (editingTestimonial) {
-      updateTestimonial(editingTestimonial.id, data)
-      toast.success('Testimonial updated successfully!')
+  const handleCreate = async (data: Omit<Testimonial, 'id' | 'createdAt'>) => {
+      try {
+        const res = await fetch('/api/testimonials', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        })
+  
+        const result = await res.json()
+  
+        if (!res.ok) {
+          throw new Error(result.message || 'Failed to create Testimonial')
+        }
+  
+        const refresh = await fetch('/api/testimonials')
+        const freshData = await refresh.json()
+  
+        useDashboardStore.getState().setTestimonials(freshData)
+  
+        toast.success('Testimonial created successfully!')
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to create Testimonial')
+      }
     }
-  }
+  
+    useEffect(() => {
+      const fetchtesTimonials = async () => {
+        const res = await fetch('/api/testimonials')
+        const data = await res.json()
+  
+        useDashboardStore.getState().setTestimonials(data)
+      }
+  
+      fetchtesTimonials()
+    }, [])
 
-  const handleDelete = (id: string) => {
-    deleteTestimonial(id)
-    setDeleteConfirm(null)
-    toast.success('Testimonial deleted successfully!')
-  }
+    const handleUpdate = async (data: Omit<Testimonial, 'id' | 'createdAt'>) => {
+      if (!editingTestimonial) return
+    
+      try {
+        const res = await fetch(`/api/testimonials/${editingTestimonial.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        })
+    
+        const result = await res.json()
+    
+        if (!res.ok) {
+          throw new Error(result.message || 'Failed to update testimonial')
+        }
+    
+        const refresh = await fetch('/api/testimonials')
+        const fresh = await refresh.json()
+    
+        useDashboardStore.getState().setTestimonials(fresh)
+    
+        toast.success('Testimonial updated successfully!')
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to update testimonial')
+      }
+    }
 
-  const handleApprove = (id: string) => {
-    updateTestimonial(id, { isApproved: true })
-    toast.success('Testimonial approved!')
-  }
+    const handleDelete = async (id: string) => {
+      try {
+        const res = await fetch(`/api/testimonials/${id}`, {
+          method: 'DELETE',
+        })
+    
+        if (!res.ok) throw new Error()
+    
+        deleteTestimonial(id) 
+        setDeleteConfirm(null)
+        toast.success('Testimonial deleted successfully!')
+      } catch (err) {
+        toast.error('Failed to delete Testimonial')
+      }
+    }
 
-  const handleReject = (id: string) => {
-    updateTestimonial(id, { isApproved: false })
-    toast.success('Testimonial rejected!')
+    const handleApprove = async (id: string) => {
+      try {
+        const res = await fetch(`/api/testimonials/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            isApproved: true,
+          }),
+        })
+    
+        const result = await res.json()
+    
+        if (!res.ok) {
+          throw new Error(result.message || 'Failed to approve')
+        }
+    
+        const refresh = await fetch('/api/testimonials')
+        const data = await refresh.json()
+    
+        useDashboardStore.getState().setTestimonials(data)
+    
+        toast.success('Testimonial approved!')
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to approve')
+      }
+    }
+
+
+
+  const handleReject = async (id: string) => {
+    try {
+      const res = await fetch(`/api/testimonials/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          isApproved: false,
+        }),
+      })
+  
+      const result = await res.json()
+  
+      if (!res.ok) {
+        throw new Error(result.message || 'Failed to reject')
+      }
+  
+      const refresh = await fetch('/api/testimonials')
+      const data = await refresh.json()
+  
+      useDashboardStore.getState().setTestimonials(data)
+  
+      toast.success('Testimonial rejected!')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to reject')
+    }
   }
 
   const getOutletName = (outletId: string) => {
