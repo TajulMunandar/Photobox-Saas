@@ -5,10 +5,17 @@ import { getAuth } from '@/lib/auth' // nanti bikin
 // FUNGSI GET DATA OUTLET
 export async function GET(req: Request) {
   const auth = getAuth(req)
+  const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'
+  const url = new URL(req.url)
+  const tenantIdParam = url.searchParams.get('tenantId')
+  const machineIdParam = url.searchParams.get('machineId')
 
   const outlets = await prisma.outlet.findMany({
     where: {
-      tenantId: auth.tenantId, 
+      ...(machineIdParam ? { machineId: machineIdParam } : {}),
+      ...(!machineIdParam && isSuperAdmin && tenantIdParam
+        ? { tenantId: tenantIdParam }
+        : !machineIdParam ? { tenantId: auth.tenantId } : {}),
     },
     include: {
       config: true
@@ -23,6 +30,11 @@ export async function GET(req: Request) {
     name: o.name ?? '',
     location: o.address ?? '',
     mapsUrl: o.mapsUrl ?? '',
+    latitude: o.latitude?.toString() ?? '',
+    longitude: o.longitude?.toString() ?? '',
+    machineId: o.machineId ?? '',
+    pin: o.pin ?? '',
+    isActive: o.isActive,
     status: 'offline',
     features: {
       qris: (o.config?.paymentMethods as any)?.qris ?? true,
@@ -41,6 +53,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const auth = getAuth(req)
+    const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'
     const body = await req.json()
 
     if (!body.name || !body.location) {
@@ -51,28 +64,30 @@ export async function POST(req: Request) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const parts = body.location.split(',')
-      const city = parts[1]?.trim().toUpperCase().replace(/\s+/g, '-') || 'UNKNOWN'
+      const city = body.name.trim().toUpperCase().replace(/\s+/g, '-') || 'OUTLET'
+
+      const targetTenantId = isSuperAdmin && body.tenantId ? body.tenantId : auth.tenantId
 
       const count = await tx.outlet.count({
         where: {
-          tenantId: auth.tenantId,
+          tenantId: targetTenantId,
         },
       })
 
       const number = String(count + 1).padStart(3, '0')
 
       const machineId = `BOOTH-${city}-${number}`
+      const pin = body.pin || String(Math.floor(100000 + Math.random() * 900000))
 
       const outlet = await tx.outlet.create({
         data: {
-          tenantId: auth.tenantId,
+          tenantId: targetTenantId,
           name: body.name,
           address: body.location,
           phone: ``,
-          latitude: null,
-          longitude: null,
-          mapsUrl: body.mapsUrl,
+          latitude: body.latitude ? parseFloat(body.latitude) : null,
+          longitude: body.longitude ? parseFloat(body.longitude) : null,
+          mapsUrl: body.mapsUrl || `https://maps.google.com/?q=${body.latitude},${body.longitude}`,
           operatingHours: {
             monday: '08:00-22:00',
             tuesday: '08:00-22:00',
@@ -84,6 +99,7 @@ export async function POST(req: Request) {
           },
           isActive: true,
           machineId,
+          pin,
         },
       })
 
@@ -112,6 +128,10 @@ export async function POST(req: Request) {
       name: result.outlet.name ?? '',
       location: result.outlet.address ?? '',
       mapsUrl: result.outlet.mapsUrl ?? '',
+      latitude: result.outlet.latitude?.toString() ?? '',
+      longitude: result.outlet.longitude?.toString() ?? '',
+      machineId: result.outlet.machineId,
+      pin: result.outlet.pin,
       status: 'offline',
       features: {
         qris: (result.config.paymentMethods as any)?.qris ?? true,
@@ -123,8 +143,9 @@ export async function POST(req: Request) {
     })
   
   } catch (err) {
+    console.error('Failed to create outlet:', err)
     return Response.json(
-      { message: 'Failed to create outlet' },
+      { message: 'Failed to create outlet', error: String(err) },
       { status: 500 }
     )
   }

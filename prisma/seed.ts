@@ -3,6 +3,7 @@
 // ============================================
 
 import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -10,14 +11,27 @@ async function main() {
   console.log('🌱 Starting seed...')
 
   // ============================================
+  // 0. Hapus semua data lama (urutan aman dari FK)
+  // ============================================
+  console.log('🗑️  Menghapus data lama...')
+  await prisma.apiKey.deleteMany()
+  await prisma.brandAsset.deleteMany()
+  await prisma.testimonial.deleteMany()
+  await prisma.voucher.deleteMany()
+  await prisma.frameTemplate.deleteMany()
+  await prisma.sessionPhoto.deleteMany()
+  await prisma.outletConfig.deleteMany()
+  await prisma.outlet.deleteMany()
+  await prisma.user.deleteMany()
+  await prisma.tenant.deleteMany()
+  console.log('✅ Data lama dihapus')
+
+  // ============================================
   // 1. Create Tenant (Vendor/Owner)
   // ============================================
-  const tenant = await prisma.tenant.upsert({
-    where: { email: 'admin@snapnext.id' },
-    update: {},
-    create: {
+  const tenant = await prisma.tenant.create({
+    data: {
       name: 'SnapNext Demo',
-      email: 'admin@snapnext.id',
       phone: '+6281234567890',
       logoUrl: '/logo.png',
       primaryColor: '#9333ea',
@@ -30,13 +44,13 @@ async function main() {
   // ============================================
   // 2. Create User (Admin)
   // ============================================
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@snapnext.id' },
-    update: {},
-    create: {
+  const passwordHash = await bcrypt.hash('admin123', 10)
+
+  const adminUser = await prisma.user.create({
+    data: {
       tenantId: tenant.id,
       email: 'admin@snapnext.id',
-      passwordHash: '$2a$10$1234567890abcdefghijklmnopqrstuvwxyz', // In real app, use bcrypt
+      passwordHash,
       name: 'Admin SnapNext',
       role: 'OWNER',
       isActive: true,
@@ -47,10 +61,8 @@ async function main() {
   // ============================================
   // 3. Create Outlets (Aceh Utara & Lhokseumawe)
   // ============================================
-  const outlet1 = await prisma.outlet.upsert({
-    where: { machineId: 'BOOTH-ACEH-001' },
-    update: {},
-    create: {
+  const outlet1 = await prisma.outlet.create({
+    data: {
       tenantId: tenant.id,
       name: 'SnapNext Aceh Utara',
       address: 'Jl. Tengku Amir Hamzah, Banda Aceh, Aceh',
@@ -68,13 +80,12 @@ async function main() {
       },
       isActive: true,
       machineId: 'BOOTH-ACEH-001',
+      pin: '123456',
     },
   })
 
-  const outlet2 = await prisma.outlet.upsert({
-    where: { machineId: 'BOOTH-LHOKSEUMAWE-001' },
-    update: {},
-    create: {
+  const outlet2 = await prisma.outlet.create({
+    data: {
       tenantId: tenant.id,
       name: 'SnapNext Lhokseumawe',
       address: 'Jl. Merdeka, Lhokseumawe, Aceh',
@@ -92,6 +103,7 @@ async function main() {
       },
       isActive: true,
       machineId: 'BOOTH-LHOKSEUMAWE-001',
+      pin: '789012',
     },
   })
   console.log('✅ Created Outlets:', outlet1.name, outlet2.name)
@@ -99,10 +111,8 @@ async function main() {
   // ============================================
   // 4. Create Outlet Configs
   // ============================================
-  await prisma.outletConfig.upsert({
-    where: { outletId: outlet1.id },
-    update: {},
-    create: {
+  await prisma.outletConfig.create({
+    data: {
       outletId: outlet1.id,
       paymentMethods: { cash: true, qris: true, voucher: true },
       priceDefault: 25000,
@@ -113,10 +123,8 @@ async function main() {
     },
   })
 
-  await prisma.outletConfig.upsert({
-    where: { outletId: outlet2.id },
-    update: {},
-    create: {
+  await prisma.outletConfig.create({
+    data: {
       outletId: outlet2.id,
       paymentMethods: { cash: true, qris: true, voucher: true },
       priceDefault: 25000,
@@ -132,11 +140,8 @@ async function main() {
   // 5. Create Frame Templates
   // ============================================
 
-  // A4 Newspaper Template
-  await prisma.frameTemplate.upsert({
-    where: { id: 'frame-a4-newspaper-001' },
-    update: {},
-    create: {
+  await prisma.frameTemplate.create({
+    data: {
       id: 'frame-a4-newspaper-001',
       tenantId: tenant.id,
       name: 'A4 Newspaper Edition',
@@ -150,11 +155,8 @@ async function main() {
     },
   })
 
-  // 4R Classic Template
-  await prisma.frameTemplate.upsert({
-    where: { id: 'frame-4r-classic-001' },
-    update: {},
-    create: {
+  await prisma.frameTemplate.create({
+    data: {
       id: 'frame-4r-classic-001',
       tenantId: tenant.id,
       name: '4R Classic',
@@ -168,11 +170,8 @@ async function main() {
     },
   })
 
-  // GIF Animated Template
-  await prisma.frameTemplate.upsert({
-    where: { id: 'frame-gif-animated-001' },
-    update: {},
-    create: {
+  await prisma.frameTemplate.create({
+    data: {
       id: 'frame-gif-animated-001',
       tenantId: tenant.id,
       name: 'GIF Animated Frame',
@@ -192,56 +191,47 @@ async function main() {
   // 6. Create Vouchers
   // ============================================
 
-  // Single-use voucher (welcome offer)
-  await prisma.voucher.upsert({
-    where: { code: 'WELCOME20' },
-    update: {},
-    create: {
+  await prisma.voucher.create({
+    data: {
       tenantId: tenant.id,
       code: 'WELCOME20',
       type: 'PERCENTAGE',
-      value: 20, // 20% discount
+      value: 20,
       minOrder: 20000,
       maxUses: 100,
       usageType: 'SINGLE_USE',
       validFrom: new Date(),
-      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       isActive: true,
     },
   })
 
-  // Multi-use voucher (promo)
-  await prisma.voucher.upsert({
-    where: { code: 'HARGA25K' },
-    update: {},
-    create: {
+  await prisma.voucher.create({
+    data: {
       tenantId: tenant.id,
       code: 'HARGA25K',
       type: 'FIXED',
-      value: 5000, // Rp 5,000 discount
+      value: 5000,
       minOrder: 25000,
-      maxUses: null, // Unlimited
+      maxUses: null,
       usageType: 'MULTI_USE',
       validFrom: new Date(),
-      validUntil: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
+      validUntil: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
       isActive: true,
     },
   })
 
-  // Another single-use voucher
-  await prisma.voucher.upsert({
-    where: { code: 'GRATIS10K' },
-    update: {},
-    create: {
+  await prisma.voucher.create({
+    data: {
       tenantId: tenant.id,
       code: 'GRATIS10K',
       type: 'FIXED',
-      value: 10000, // Rp 10,000 discount
+      value: 10000,
       minOrder: 30000,
       maxUses: 50,
       usageType: 'SINGLE_USE',
       validFrom: new Date(),
-      validUntil: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
+      validUntil: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
       isActive: true,
     },
   })
@@ -350,7 +340,7 @@ async function main() {
   console.log('\n🎉 Seed completed successfully!')
   console.log('\n📋 Login Credentials:')
   console.log('   Email: admin@snapnext.id')
-  console.log('   Password: demo123')
+  console.log('   Password: admin123')
   console.log('\n📍 Outlets:')
   console.log('   - Aceh Utara (BOOTH-ACEH-001)')
   console.log('   - Lhokseumawe (BOOTH-LHOKSEUMAWE-001)')

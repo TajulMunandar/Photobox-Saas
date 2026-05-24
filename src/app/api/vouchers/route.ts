@@ -5,11 +5,19 @@ import { getAuth } from '@/lib/auth' // nanti bikin
 // FUNGSI GET DATA vouchers
 export async function GET(req: Request) {
   const auth = getAuth(req)
+  const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'
+  const url = new URL(req.url)
+  const tenantIdParam = url.searchParams.get('tenantId')
+
+  const where: any = {}
+  if (isSuperAdmin && tenantIdParam) {
+    where.tenantId = tenantIdParam
+  } else if (!isSuperAdmin) {
+    where.tenantId = auth.tenantId
+  }
 
   const vouchers = await prisma.voucher.findMany({
-    where: {
-      tenantId: auth.tenantId, 
-    },
+    where,
   
     orderBy: {
       createdAt: 'desc',
@@ -41,12 +49,20 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const auth = getAuth(req)
+    const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'
     const body = await req.json()
 
     // VALIDASI
     if (!body.discountType || !body.discountValue) {
       return Response.json(
         { message: 'Discount type & value required' },
+        { status: 400 }
+      )
+    }
+
+    if (!body.code) {
+      return Response.json(
+        { message: 'Voucher code is required' },
         { status: 400 }
       )
     }
@@ -70,20 +86,21 @@ export async function POST(req: Request) {
       )
     }
 
-    // GENERATE CODE RANDOM
-    let code = ''
-    let isUnique = false
-
-    while (!isUnique) {
-      code = 'VC-' + Math.random().toString(36).substring(2, 8).toUpperCase()
-      const existing = await prisma.voucher.findUnique({ where: { code } })
-      if (!existing) isUnique = true
+    // Check unique code
+    const existingCode = await prisma.voucher.findUnique({ where: { code: body.code } })
+    if (existingCode) {
+      return Response.json(
+        { message: 'Voucher code already exists' },
+        { status: 400 }
+      )
     }
+
+    const targetTenantId = isSuperAdmin && body.tenantId ? body.tenantId : auth.tenantId
 
     const result = await prisma.voucher.create({
       data: {
-        tenantId: auth.tenantId,
-        code: code,
+        tenantId: targetTenantId,
+        code: body.code,
 
         type: body.discountType === 'percentage' ? 'PERCENTAGE' : 'FIXED',
         value: body.discountValue,

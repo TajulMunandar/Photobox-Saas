@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   BarChart3, 
   TrendingUp, 
@@ -8,9 +8,7 @@ import {
   DollarSign,
   Camera,
   Store,
-  Calendar,
   Download,
-  Filter
 } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { motion } from 'framer-motion'
@@ -23,25 +21,109 @@ export function ReportModule() {
   const { outlets, transactions, templates } = useDashboardStore()
   const [dateRange, setDateRange] = useState('week')
   const [selectedOutlet, setSelectedOutlet] = useState('all')
+  const [sessions, setSessions] = useState<any[]>([])
 
-  // Calculate stats
-  const totalRevenue = transactions
+  // Fetch real sessions data for photo count
+  useEffect(() => {
+    async function fetchSessions() {
+      try {
+        const res = await fetch('/api/sessions')
+        if (res.ok) {
+          const data = await res.json()
+          setSessions(data)
+        }
+      } catch (e) {
+        console.error('Failed to load sessions for report')
+      }
+    }
+    fetchSessions()
+  }, [])
+
+  // Filter transactions based on date range and outlet
+  const getFilteredTransactions = () => {
+    let filtered = [...transactions]
+
+    // Filter by outlet
+    if (selectedOutlet !== 'all') {
+      filtered = filtered.filter(t => t.outletId === selectedOutlet)
+    }
+
+    // Filter by date range
+    const now = new Date()
+    let startDate = new Date()
+
+    if (dateRange === 'week') {
+      startDate.setDate(now.getDate() - 7)
+    } else if (dateRange === 'month') {
+      startDate.setMonth(now.getMonth() - 1)
+    } else if (dateRange === 'year') {
+      startDate.setFullYear(now.getFullYear() - 1)
+    }
+
+    filtered = filtered.filter(t => new Date(t.createdAt) >= startDate)
+
+    return filtered
+  }
+
+  const filteredTransactions = getFilteredTransactions()
+
+  // Calculate real stats from Supabase data
+  const totalRevenue = filteredTransactions
     .filter(t => t.status === 'success')
     .reduce((sum, t) => sum + t.amount, 0)
 
-  const totalPhotos = 156 // Mock data
   const activeOutlets = outlets.filter(o => o.status === 'online').length
 
-  // Mock chart data
-  const chartData = [
-    { day: 'Mon', revenue: 2500000, photos: 45 },
-    { day: 'Tue', revenue: 3200000, photos: 52 },
-    { day: 'Wed', revenue: 2800000, photos: 48 },
-    { day: 'Thu', revenue: 3500000, photos: 58 },
-    { day: 'Fri', revenue: 4200000, photos: 72 },
-    { day: 'Sat', revenue: 5500000, photos: 95 },
-    { day: 'Sun', revenue: 4800000, photos: 82 },
-  ]
+  // Calculate total photos from real sessions
+  const filteredSessions = selectedOutlet === 'all'
+    ? sessions
+    : sessions.filter(s => s.outletId === selectedOutlet)
+
+  const totalPhotos = filteredSessions.reduce((sum, s) => sum + (s.photoCount || 0), 0)
+
+  // Generate real chart data from actual transactions
+  const generateChartData = () => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const now = new Date()
+    const chart: { day: string; revenue: number; photos: number }[] = []
+
+    let daysToShow = 7
+    if (dateRange === 'month') daysToShow = 30
+    if (dateRange === 'year') daysToShow = 12
+
+    for (let i = daysToShow - 1; i >= 0; i--) {
+      const date = new Date(now)
+      date.setDate(date.getDate() - i)
+
+      const dayName = days[date.getDay()]
+      const dateStr = date.toISOString().split('T')[0]
+
+      const dayTransactions = filteredTransactions.filter(t => {
+        const tDate = new Date(t.createdAt).toISOString().split('T')[0]
+        return tDate === dateStr
+      })
+
+      const revenue = dayTransactions
+        .filter(t => t.status === 'success')
+        .reduce((sum, t) => sum + t.amount, 0)
+
+      const daySessions = filteredSessions.filter(s => {
+        const sDate = new Date(s.createdAt).toISOString().split('T')[0]
+        return sDate === dateStr
+      })
+      const photos = daySessions.reduce((sum, s) => sum + (s.photoCount || 0), 0)
+
+      chart.push({
+        day: dateRange === 'year' ? date.toLocaleString('default', { month: 'short' }) : dayName,
+        revenue,
+        photos,
+      })
+    }
+
+    return chart
+  }
+
+  const chartData = generateChartData()
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -51,7 +133,7 @@ export function ReportModule() {
     }).format(price)
   }
 
-  const maxRevenue = Math.max(...chartData.map(d => d.revenue))
+  const maxRevenue = Math.max(...chartData.map(d => d.revenue), 1)
 
   return (
     <div className="space-y-6">
@@ -175,7 +257,11 @@ export function ReportModule() {
         transition={{ delay: 0.4 }}
         className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
       >
-        <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Weekly Revenue</h2>
+        <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+          {dateRange === 'week' && 'Revenue (Last 7 Days)'}
+          {dateRange === 'month' && 'Revenue (Last 30 Days)'}
+          {dateRange === 'year' && 'Revenue (Last 12 Months)'}
+        </h2>
         <div className="h-64 flex items-end justify-between gap-2">
           {chartData.map((data, index) => (
             <div key={data.day} className="flex-1 flex flex-col items-center gap-2">
@@ -209,7 +295,7 @@ export function ReportModule() {
               </tr>
             </thead>
             <tbody>
-              {transactions.slice(0, 5).map((tx) => (
+              {filteredTransactions.slice(0, 8).map((tx) => (
                 <tr key={tx.id} className="border-b dark:border-gray-800 last:border-0">
                   <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">{tx.id}</td>
                   <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">

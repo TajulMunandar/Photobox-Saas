@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { 
-  Camera, 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
+import {
+  Camera,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
   ArrowRight,
   AlertCircle,
   CheckCircle2
@@ -26,6 +26,7 @@ export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,33 +34,28 @@ export default function AdminLoginPage() {
     setSuccess('')
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, rememberMe }),
+      })
 
-    // Simple validation
-    if (!email || !password) {
-      setError('Please fill in all fields')
+      const data = await res.json()
+
+      if (data.success) {
+        setSuccess('Login berhasil! Mengarahkan...')
+        setTimeout(() => {
+          window.location.href = '/admin'
+        }, 800)
+      } else {
+        setError(data.error || 'Login gagal')
+        setIsLoading(false)
+      }
+    } catch (err) {
+      setError('Terjadi kesalahan. Coba lagi.')
       setIsLoading(false)
-      return
     }
-
-    if (!email.includes('@')) {
-      setError('Please enter a valid email address')
-      setIsLoading(false)
-      return
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
-      setIsLoading(false)
-      return
-    }
-
-    // Simulate successful login
-    setSuccess('Login successful! Redirecting...')
-    setTimeout(() => {
-      window.location.href = '/admin'
-    }, 1000)
   }
 
   return (
@@ -69,7 +65,7 @@ export default function AdminLoginPage() {
         <svg className="w-full h-full">
           <defs>
             <pattern id="login-pattern" width="60" height="60" patternUnits="userSpaceOnUse">
-              <circle cx="30" cy="30" r="20" fill="none" stroke={branding.primaryColor} strokeWidth="1"/>
+              <circle cx="30" cy="30" r="20" fill="none" stroke={branding.primaryColor} strokeWidth="1" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#login-pattern)" />
@@ -85,24 +81,24 @@ export default function AdminLoginPage() {
         <div className="text-center mb-8">
           <a href="/" className="inline-flex items-center gap-2 mb-4">
             {branding.logoUrl ? (
-              <img 
-                src={branding.logoUrl} 
+              <img
+                src={branding.logoUrl}
                 alt={branding.companyName}
                 className="h-12 w-auto"
               />
             ) : (
-              <div 
+              <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center"
-                style={{ 
+                style={{
                   background: `linear-gradient(135deg, ${branding.primaryColor}, ${branding.secondaryColor})`
                 }}
               >
                 <Camera className="w-6 h-6 text-white" />
               </div>
             )}
-            <span 
+            <span
               className="text-2xl font-bold"
-              style={{ 
+              style={{
                 background: `linear-gradient(135deg, ${branding.primaryColor}, ${branding.secondaryColor})`,
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent'
@@ -153,9 +149,9 @@ export default function AdminLoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@snapnext.com"
+                  placeholder="admin@snapnext.id"
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all"
-                  style={{ 
+                  style={{
                     '--tw-ring-color': branding.primaryColor
                   } as React.CSSProperties}
                   disabled={isLoading}
@@ -193,13 +189,15 @@ export default function AdminLoginPage() {
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
                   className="w-4 h-4 rounded border-gray-300"
                   style={{ accentColor: branding.primaryColor }}
                 />
                 <span className="text-sm text-gray-600">Remember me</span>
               </label>
-              <a 
-                href="#" 
+              <a
+                href="#"
                 className="text-sm font-medium hover:underline"
                 style={{ color: branding.primaryColor }}
               >
@@ -212,7 +210,7 @@ export default function AdminLoginPage() {
               type="submit"
               disabled={isLoading}
               className="w-full py-3 px-4 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ 
+              style={{
                 background: `linear-gradient(135deg, ${branding.primaryColor}, ${branding.secondaryColor})`
               }}
             >

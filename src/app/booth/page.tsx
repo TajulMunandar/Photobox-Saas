@@ -20,6 +20,7 @@ import {
 import { sendGalleryNotification } from '@/lib/whatsapp-service'
 import { compositeToRamadanFrame } from '@/lib/photo-compositor'
 import { useRouter } from 'next/navigation'
+import { LogOut, Power } from 'lucide-react'
 
 // ============================================
 // Demo Templates (Ramadhan Theme)
@@ -85,6 +86,9 @@ const demoConfig = {
 
 export default function BoothPage() {
   const router = useRouter()
+  const [boothOutletId, setBoothOutletId] = useState<string | null>(null)
+  const [authChecking, setAuthChecking] = useState(true)
+
   const {
     session,
     config,
@@ -122,10 +126,71 @@ export default function BoothPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const captureTimerRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Fetch real outlet config from API
+  const [outletConfig, setOutletConfig] = useState<{
+    priceDefault: number
+    printEnabled: boolean
+    galleryEnabled: boolean
+    gifEnabled: boolean
+    newspaperEnabled: boolean
+    paymentMethods: { qris: boolean; voucher: boolean; cash: boolean }
+  } | null>(null)
+  const [outletName, setOutletName] = useState('')
+  const [realTemplates, setRealTemplates] = useState<Template[]>([])
+  const [templatesLoaded, setTemplatesLoaded] = useState(false)
+
+  useEffect(() => {
+    if (!boothOutletId) return
+    Promise.all([
+      fetch(`/api/outlets/${boothOutletId}`).then(r => r.json()),
+      fetch(`/api/templates/active?outletId=${boothOutletId}`).then(r => r.json()),
+    ])
+      .then(([outletData, templatesData]) => {
+        if (outletData.config) setOutletConfig(outletData.config)
+        if (outletData.name) setOutletName(outletData.name)
+        if (Array.isArray(templatesData) && templatesData.length > 0) {
+          setRealTemplates(templatesData.map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            theme: 'Custom',
+            imageUrl: t.imageUrl,
+            thumbnailUrl: t.imageUrl,
+            slots: 6,
+            layout: 'grid-2x3' as const,
+          })))
+        }
+      })
+      .catch(() => {})
+      .finally(() => setTemplatesLoaded(true))
+  }, [boothOutletId])
+
+  const actualPrice = outletConfig?.priceDefault ?? demoConfig.defaultPrice
+
+  // Auth guard: redirect to login if no cached session
+  useEffect(() => {
+    const cached = localStorage.getItem('boothLogin')
+    if (!cached) {
+      router.replace('/booth/login')
+      return
+    }
+    try {
+      const data = JSON.parse(cached)
+      if (!data.outletId) {
+        router.replace('/booth/login')
+        return
+      }
+      setBoothOutletId(data.outletId)
+    } catch {
+      router.replace('/booth/login')
+    } finally {
+      setAuthChecking(false)
+    }
+  }, [router])
+
   // Initialize session on mount
   useEffect(() => {
     if (!session.code) {
-      startSession(demoConfig.outletId)
+      startSession(boothOutletId || demoConfig.outletId)
     }
   }, [])
 
@@ -252,7 +317,7 @@ export default function BoothPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            amount: demoConfig.defaultPrice,
+            amount: actualPrice,
             orderId: session.code,
             customerPhone: session.customerPhone,
           }),
@@ -272,7 +337,7 @@ export default function BoothPage() {
       } catch (error) {
         console.error('QRIS generation failed:', error)
         // Fallback to demo mode
-        const demoQris = `demo://qris?amount=${demoConfig.defaultPrice}&order=${session.code}`
+        const demoQris = `demo://qris?amount=${actualPrice}&order=${session.code}`
         setQrisString(demoQris, new Date(Date.now() + 30 * 60 * 1000), `DEMO-${session.code}`)
         setTransactionRef(`DEMO-${session.code}`)
         setShowQrisModal(true)
@@ -438,17 +503,41 @@ export default function BoothPage() {
         } else {
           console.error('Print failed:', result.error)
         }
+
+        const galleryCode = generateGalleryCode()
+        
+         // Save session & transaction to database
+         try {
+           const discountAmount = usePaymentStore.getState().voucherDiscount || 0;
+           const finalPrice = session.paymentMethod && session.paymentMethod !== 'event' ? actualPrice - discountAmount : 0;
+           await fetch('/api/booth/save-session', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({
+               outletId: boothOutletId,
+               frameId: realTemplates.length > 0 ? session.template.id : undefined,
+               sessionCode: session.code,
+               photos: photoUrls,
+               totalPrice: finalPrice,
+               paymentMethod: session.paymentMethod === 'qris' ? 'QRIS' : session.paymentMethod === 'voucher' ? 'VOUCHER' : null,
+               voucherCode: usePaymentStore.getState().voucherCode || null,
+               voucherDiscount: discountAmount,
+               galleryCode,
+             }),
+           })
+        } catch (e) {
+          console.error('Failed to save session:', e)
+        }
         
         // Complete session after printing
         setTimeout(() => {
-          const galleryCode = generateGalleryCode()
           setCompleted(galleryCode)
 
           // Send WhatsApp notification if phone number provided
           if (session.customerPhone) {
             sendGalleryNotification({
               phoneNumber: session.customerPhone,
-              outletName: demoConfig.outletName,
+              outletName: outletName || demoConfig.outletName,
               galleryCode,
               galleryUrl: `https://snapnext.com/gallery/${galleryCode}`,
               photoCount: 3,
@@ -456,13 +545,33 @@ export default function BoothPage() {
           }
         }, 1500)
         
-      } catch (error) {
-        console.error('Print error:', error)
-        setTimeout(() => {
-          const galleryCode = generateGalleryCode()
-          setCompleted(galleryCode)
-        }, 2000)
-      }
+       } catch (error) {
+         console.error('Print error:', error)
+         const galleryCode = generateGalleryCode()
+         // Try to save even on error
+         try {
+           const discountAmount = usePaymentStore.getState().voucherDiscount || 0;
+           const finalPrice = session.paymentMethod && session.paymentMethod !== 'event' ? actualPrice - discountAmount : 0;
+           await fetch('/api/booth/save-session', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({
+               outletId: boothOutletId,
+               frameId: realTemplates.length > 0 ? session.template?.id : undefined,
+               sessionCode: session.code,
+               photos: session.photos.map(p => p.url || p.base64 || '').filter(Boolean),
+               totalPrice: finalPrice,
+               paymentMethod: session.paymentMethod === 'qris' ? 'QRIS' : session.paymentMethod === 'voucher' ? 'VOUCHER' : null,
+               voucherCode: usePaymentStore.getState().voucherCode || null,
+               voucherDiscount: discountAmount,
+               galleryCode,
+             }),
+           })
+         } catch {}
+         setTimeout(() => {
+           setCompleted(galleryCode)
+         }, 2000)
+       }
     }
   }
 
@@ -502,18 +611,37 @@ export default function BoothPage() {
   }
 
   // Handle print cancel - could be finish or proceed with 1 copy
-  const handlePrintCancel = () => {
+  const handlePrintCancel = async () => {
     setShowPrintUpsell(false)
     setShowAdditionalPayment(false)
     // Complete the session without additional prints
     const galleryCode = generateGalleryCode()
+    
+    // Save session to DB
+    try {
+      await fetch('/api/booth/save-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          outletId: boothOutletId,
+          frameId: realTemplates.length > 0 ? session.template?.id : undefined,
+          sessionCode: session.code,
+          photos: session.photos.map(p => p.url || p.base64 || '').filter(Boolean),
+          totalPrice: session.paymentMethod && session.paymentMethod !== 'event' ? actualPrice : 0,
+          paymentMethod: session.paymentMethod === 'qris' ? 'QRIS' : session.paymentMethod === 'voucher' ? 'VOUCHER' : null,
+          voucherCode: usePaymentStore.getState().voucherCode || null,
+          galleryCode,
+        }),
+      })
+    } catch {}
+
     setCompleted(galleryCode)
 
     // Send WhatsApp notification if phone number provided
     if (session.customerPhone) {
       sendGalleryNotification({
         phoneNumber: session.customerPhone,
-        outletName: demoConfig.outletName,
+        outletName: outletName || demoConfig.outletName,
         galleryCode,
         galleryUrl: `https://snapnext.com/gallery/${galleryCode}`,
         photoCount: 3,
@@ -547,8 +675,39 @@ export default function BoothPage() {
     return `${Math.random().toString(36).substring(2, 6).toUpperCase()}`
   }
 
+  // Logout / Turn off booth
+  const handleTurnOff = async () => {
+    if (!boothOutletId) return
+    try {
+      await fetch(`/api/outlets/${boothOutletId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: false }),
+      })
+    } catch {}
+    localStorage.removeItem('boothLogin')
+    router.replace('/booth/login')
+  }
+
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-black">
+      {/* Logout Button */}
+      <button
+        onClick={handleTurnOff}
+        className="fixed top-4 left-4 z-[100] flex items-center gap-2 px-3 py-2 bg-gray-900/80 text-white rounded-lg hover:bg-red-600 text-xs transition-all border border-gray-700"
+      >
+        <Power className="w-3.5 h-3.5" />
+        Keluar
+      </button>
+
       <OfflineBanner />
 
       {/* Session Timer */}
@@ -560,11 +719,12 @@ export default function BoothPage() {
       {/* Payment Selection */}
       {session.status === 'payment' && (
         <PaymentSelector
-          totalPrice={demoConfig.defaultPrice}
+          totalPrice={actualPrice}
           onSelect={handlePaymentSelect}
-          config={demoConfig.paymentMethods}
+          config={{ qris: outletConfig?.paymentMethods.qris ?? demoConfig.paymentMethods.qris, voucher: outletConfig?.paymentMethods.voucher ?? demoConfig.paymentMethods.voucher, event: true }}
           customerPhone={session.customerPhone || ''}
           onPhoneChange={setCustomerPhone}
+          outletId={boothOutletId || undefined}
         />
       )}
 
@@ -572,7 +732,7 @@ export default function BoothPage() {
       {showQrisModal && qrisString && (
         <QrisDisplay
           qrString={qrisString}
-          amount={demoConfig.defaultPrice}
+          amount={actualPrice}
           onComplete={handleQrisConfirm}
           onCancel={handleQrisCancel}
         />
@@ -581,7 +741,7 @@ export default function BoothPage() {
       {/* Template Selection */}
       {session.status === 'template-selection' && (
         <TemplateSelector
-          templates={demoTemplates}
+          templates={realTemplates.length > 0 ? realTemplates : demoTemplates}
           onSelect={handleTemplateSelect}
           sessionTimerActive={session.sessionTimerActive}
           sessionTimerSeconds={session.sessionTimer}

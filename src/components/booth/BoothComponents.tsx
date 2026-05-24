@@ -238,38 +238,62 @@ interface PaymentSelectorProps {
   }
   customerPhone: string
   onPhoneChange: (phone: string) => void
+  outletId?: string
 }
 
-export function PaymentSelector({ totalPrice, onSelect, config, customerPhone, onPhoneChange }: PaymentSelectorProps) {
+export function PaymentSelector({ totalPrice, onSelect, config, customerPhone, onPhoneChange, outletId }: PaymentSelectorProps) {
   const [voucherCode, setVoucherCode] = useState('')
   const [voucherError, setVoucherError] = useState('')
   const [isApplyingVoucher, setIsApplyingVoucher] = useState(false)
+  const [activeVouchers, setActiveVouchers] = useState<any[]>([])
   const { applyVoucher, voucherDiscount, voucherApplied } = usePaymentStore()
+  const [matchedVoucher, setMatchedVoucher] = useState<any>(null)
+
+  const hasVouchers = activeVouchers.length > 0 && config.voucher
 
   const finalPrice = totalPrice - voucherDiscount
 
-  const handleVoucherApply = () => {
-    if (!voucherCode || voucherCode.length < 4) {
-      setVoucherError('Kode voucher minimal 4 karakter')
-      return
-    }
-    
-    setIsApplyingVoucher(true)
-    setVoucherError('')
-    
-    // Simulate voucher validation
-    setTimeout(() => {
-      // Demo: accept any code starting with 'FREE' or 'TEST'
-      if (voucherCode.toUpperCase().startsWith('FREE') || voucherCode.toUpperCase().startsWith('TEST')) {
-        applyVoucher(voucherCode, totalPrice) // Full discount for demo
-        setIsApplyingVoucher(false)
-      } else {
-        setVoucherError('Kode voucher tidak valid')
-        setIsApplyingVoucher(false)
-      }
-    }, 1000)
+  // Find voucher matching entered code for display
+  const displayVoucher = activeVouchers.find(v => v.code === voucherCode.toUpperCase())
+
+ const handleVoucherApply = () => {
+  if (!voucherCode || voucherCode.length < 4) {
+    setVoucherError('Kode voucher minimal 4 karakter')
+    return
+  }
+  
+  setIsApplyingVoucher(true)
+  setVoucherError('')
+  
+  const matched = activeVouchers.find(v => v.code === voucherCode.toUpperCase())
+
+  if (!matched) {
+    setVoucherError('Kode voucher tidak valid')
+    setIsApplyingVoucher(false)
+    return
   }
 
+  setMatchedVoucher(matched) // ← simpan ke state
+
+  if (matched.maxUses !== null && matched.usedCount >= matched.maxUses) {
+    setVoucherError('Voucher telah habis digunakan')
+    setIsApplyingVoucher(false)
+    return
+  }
+
+  if (matched.minPurchase > totalPrice) {
+    setVoucherError(`Min. pembelian Rp ${matched.minPurchase.toLocaleString('id-ID')}`)
+    setIsApplyingVoucher(false)
+    return
+  }
+
+  const discount = matched.discountType === 'percentage'
+    ? Math.round(totalPrice * matched.discountValue / 100)
+    : matched.discountValue
+
+  applyVoucher(voucherCode, Math.min(discount, totalPrice))
+  setIsApplyingVoucher(false)
+}
   const handleVoucherContinue = () => {
     if (voucherApplied) {
       onSelect('voucher')
@@ -346,43 +370,46 @@ export function PaymentSelector({ totalPrice, onSelect, config, customerPhone, o
             </motion.button>
           )}
 
-          {config.voucher && (
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                if (!voucherApplied) {
-                  document.getElementById('voucher-input')?.focus()
-                } else {
-                  onSelect('voucher')
-                }
-              }}
-              className={`relative p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-3 min-h-[140px] ${
-                voucherApplied 
-                  ? 'border-green-500 bg-gradient-to-b from-green-50 to-white' 
-                  : 'border-purple-200 bg-gradient-to-b from-purple-50 to-white hover:border-purple-400 hover:shadow-lg'
-              }`}
-            >
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center ${
-                voucherApplied ? 'bg-green-100' : 'bg-purple-100'
-              }`}>
-                <Sparkles className={`w-8 h-8 ${voucherApplied ? 'text-green-600' : 'text-purple-600'}`} />
-              </div>
-              <div className="text-center">
-                <p className={`font-bold ${voucherApplied ? 'text-green-700' : 'text-gray-800'}`}>
-                  {voucherApplied ? 'Voucher' : 'Gunakan'}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {voucherApplied ? '✓ Terpakai' : 'Kode Voucher'}
-                </p>
-              </div>
-              {voucherApplied && (
-                <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
-                  <Check className="w-4 h-4 text-white" />
-                </div>
-              )}
-            </motion.button>
-          )}
+           {hasVouchers && (
+             <motion.button
+               whileHover={{ scale: 1.02 }}
+               whileTap={{ scale: 0.98 }}
+               onClick={() => {
+                 if (!voucherApplied) {
+                   document.getElementById('voucher-input')?.focus()
+                 } else {
+                   onSelect('voucher')
+                 }
+               }}
+               disabled={matchedVoucher && matchedVoucher.maxUses !== null && matchedVoucher.usedCount >= matchedVoucher.maxUses}
+               className={`relative p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-3 min-h-[140px] ${
+                 voucherApplied 
+                   ? 'border-green-500 bg-gradient-to-b from-green-50 to-white' 
+                   : matchedVoucher && matchedVoucher.maxUses !== null && matchedVoucher.usedCount >= matchedVoucher.maxUses
+                     ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
+                     : 'border-purple-200 bg-gradient-to-b from-purple-50 to-white hover:border-purple-400 hover:shadow-lg'
+               }`}
+             >
+               <div className={`w-14 h-14 rounded-full flex items-center justify-center ${
+                 voucherApplied ? 'bg-green-100' : 'bg-purple-100'
+               }`}>
+                 <Sparkles className={`w-8 h-8 ${voucherApplied ? 'text-green-600' : 'text-purple-600'}`} />
+               </div>
+               <div className="text-center">
+                 <p className={`font-bold ${voucherApplied ? 'text-green-700' : 'text-gray-800'}`}>
+                   {voucherApplied ? 'Voucher' : 'Gunakan'}
+                 </p>
+                 <p className="text-xs text-gray-500">
+                   {voucherApplied ? '✓ Terpakai' : matchedVoucher && matchedVoucher.maxUses !== null ? `${matchedVoucher.usedCount} / ${matchedVoucher.maxUses}` : 'Kode Voucher'}
+                 </p>
+               </div>
+               {voucherApplied && (
+                 <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                   <Check className="w-4 h-4 text-white" />
+                 </div>
+               )}
+             </motion.button>
+           )}
 
           {config.event && (
             <motion.button
@@ -404,7 +431,7 @@ export function PaymentSelector({ totalPrice, onSelect, config, customerPhone, o
         </div>
 
         {/* Voucher Input - Show if voucher selected and not applied */}
-        {!voucherApplied && config.voucher && (
+        {!voucherApplied && hasVouchers && (
           <motion.div 
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -1197,7 +1224,10 @@ export function CompletedScreen({ galleryCode, customerPhone, onDone }: Complete
         )}
 
         <button
-          onClick={onDone}
+          onClick={() => {
+            onDone();
+            window.location.reload();
+          }}
           className="w-full py-4 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold hover:from-pink-400 hover:to-purple-500 transition-colors"
         >
           Selesai

@@ -5,11 +5,19 @@ import { getAuth } from '@/lib/auth' // nanti bikin
 // FUNGSI GET DATA Testimonial
 export async function GET(req: Request) {
   const auth = getAuth(req)
+  const url = new URL(req.url)
+  const outletId = url.searchParams.get('outletId')
+
+  const where: any = {
+    tenantId: auth.tenantId,
+  }
+
+  if (outletId) {
+    where.outletId = outletId
+  }
 
   const testimonials = await prisma.testimonial.findMany({
-    where: {
-      tenantId: auth.tenantId, 
-    },
+    where,
     include: {
       outlet: {
         select: {

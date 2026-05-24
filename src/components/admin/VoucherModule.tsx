@@ -26,12 +26,12 @@ import { UsageType } from '@prisma/client'
 interface VoucherFormProps {
   voucher?: Voucher | null
   onClose: () => void
-  onSubmit: (data: Omit<Voucher, 'id' | 'createdAt' | 'code' | 'usedCount'>) => void
+  onSubmit: (data: Omit<Voucher, 'id' | 'createdAt' | 'usedCount'>) => void
 }
 
-function VoucherForm({ voucher, onClose, onSubmit }: VoucherFormProps) {
+export function VoucherForm({ voucher, onClose, onSubmit }: VoucherFormProps) {
   const [formData, setFormData] = useState({
-    // code: voucher?.code || '',
+    code: voucher?.code || '',
     usageType: voucher?.usageType || 'SINGLE_USE' as const,
     discountType: voucher?.discountType || 'percentage' as const,
     discountValue: voucher?.discountValue || 0,
@@ -78,6 +78,20 @@ function VoucherForm({ voucher, onClose, onSubmit }: VoucherFormProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
+          {!voucher && (
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Voucher Code</label>
+              <input
+                type="text"
+                value={formData.code}
+                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="WELCOME2024"
+                required
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Discount Type</label>
             <select
@@ -154,6 +168,15 @@ function VoucherForm({ voucher, onClose, onSubmit }: VoucherFormProps) {
             />
           </div>
 
+          {voucher && (
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Voucher Code</label>
+              <div className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-mono text-sm">
+                {voucher.code}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Valid From</label>
@@ -229,7 +252,7 @@ export function VoucherModule() {
     return matchesSearch && matchesStatus
   })
 
-  const handleCreate = async (data: Omit<Voucher, 'id' | 'createdAt' | 'code' | 'usedCount'>) => {
+  const handleCreate = async (data: Omit<Voucher, 'id' | 'createdAt' | 'usedCount'>) => {
     try {
       const res = await fetch('/api/vouchers', {
         method: 'POST',
@@ -267,7 +290,7 @@ export function VoucherModule() {
     fetchVouchers()
   }, [])
 
-  const handleUpdate = async (data: Omit<Voucher, 'id' | 'createdAt' | 'code' | 'usedCount'>) => {
+  const handleUpdate = async (data: Omit<Voucher, 'id' | 'createdAt' | 'usedCount'>) => {
     if (!editingVoucher) return
 
     try {
@@ -304,10 +327,12 @@ export function VoucherModule() {
       })
   
       if (!res.ok) throw new Error()
-  
-      deleteVoucher(id) 
+
+      const refresh = await fetch('/api/vouchers')
+      const freshData = await refresh.json()
+      useDashboardStore.getState().setVouchers(freshData)
       setDeleteConfirm(null)
-      toast.success('voucher deleted successfully!')
+      toast.success('Voucher deleted successfully!')
     } catch (err) {
       toast.error('Failed to delete voucher')
     }

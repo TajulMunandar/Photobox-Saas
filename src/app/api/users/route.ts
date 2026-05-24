@@ -1,21 +1,23 @@
 import { prisma } from '@/lib/prisma'
-import { getAuth } from '@/lib/auth' // nanti bikin
+import { getAuth, hashPassword } from '@/lib/auth' // nanti bikin
 
 
 // FUNGSI GET DATA USER
 export async function GET(req: Request) {
   const auth = getAuth(req)
+  const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'
+
+  const where: any = {}
+  if (!isSuperAdmin) {
+    where.tenantId = auth.tenantId
+  }
 
   const users = await prisma.user.findMany({
-    where: {
-      tenantId: auth.tenantId, 
-    },
+    where,
     include: {
-      outlet: {
-        select: {
-          name: true
-        }
-      }
+      tenant: {
+        select: { name: true },
+      },
     },
     orderBy: {
       createdAt: 'desc',
@@ -25,12 +27,11 @@ export async function GET(req: Request) {
   const formatted = users.map((u) => ({
     id: u.id,
     tenantId: u.tenantId ?? '',
-    outletId: u.outletId ?? '',
+    tenantName: u.tenant?.name ?? '',
     email: u.email ?? '',
     name: u.name ?? '',
     role: u.role.toLocaleLowerCase() ?? '',
     status: u.isActive === true ? 'active' : 'inactive',
-    outletName: u.outlet?.name ?? '',
     createdAt: u.createdAt,
   }))
 
@@ -42,7 +43,9 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const auth = getAuth(req)
+    const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'
     const body = await req.json()
+
     if (!body.name || !body.email) {
       return Response.json(
         { message: 'Name and email required' },
@@ -50,25 +53,26 @@ export async function POST(req: Request) {
       )
     }
 
+    if (!body.password) {
+      return Response.json(
+        { message: 'Password is required' },
+        { status: 400 }
+      )
+    }
+
+    const tenantId = isSuperAdmin && body.tenantId ? body.tenantId : auth.tenantId
+    const passwordHash = await hashPassword(body.password)
+
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
-          tenantId: auth.tenantId,
-          outletId: body.outletId || null,
-          // outletId: body.outletId && body.outletId !== '' ? body.outletId : null,
+          tenantId,
           email: body.email,
-          passwordHash: '',
+          passwordHash,
           name: body.name,
           role: body.role.toUpperCase(),
           isActive: body.status === 'active',
           lastLogin: null,
-        },
-        include: {
-          outlet: {
-            select: {
-              name: true,
-            },
-          },
         },
       })
 
@@ -79,14 +83,10 @@ export async function POST(req: Request) {
     return Response.json({
       id: result.id,
       tenantId: result.tenantId,
-      outletId: result.outletId ?? '',
       email: result.email ?? '',
       name: result.name ?? '',
       role: result.role ?? '',
-
       status: result.isActive ? 'active' : 'inactive',
-
-      outletName: result.outlet?.name ?? '',
       createdAt: result.createdAt,
     })
 

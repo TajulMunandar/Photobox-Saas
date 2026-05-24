@@ -11,11 +11,21 @@ import {
   WifiOff,
   AlertCircle,
   X,
-  Check
+  Navigation
 } from 'lucide-react'
 import { useDashboardStore, Outlet } from '@/lib/stores/dashboard-store'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
+import dynamic from 'next/dynamic'
+
+const LocationMap = dynamic(() => import('@/components/admin/LocationMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-48 rounded-lg border dark:border-gray-700 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+      <p className="text-sm text-gray-500">Memuat peta...</p>
+    </div>
+  ),
+})
 
 // ============================================
 // Outlet Form Component
@@ -31,7 +41,8 @@ function OutletForm({ outlet, onClose, onSubmit }: OutletFormProps) {
   const [formData, setFormData] = useState({
     name: outlet?.name || '',
     location: outlet?.location || '',
-    mapsUrl: outlet?.mapsUrl || '',
+    latitude: outlet?.latitude || '',
+    longitude: outlet?.longitude || '',
     status: outlet?.status || 'offline' as const,
     features: {
       qris: outlet?.features.qris ?? true,
@@ -41,12 +52,18 @@ function OutletForm({ outlet, onClose, onSubmit }: OutletFormProps) {
     lastHeartbeat: outlet?.lastHeartbeat || new Date().toISOString()
   })
 
-  // Update form when outlet prop changes (for edit mode)
+  const [selectedPosition, setSelectedPosition] = useState<{ lat: number; lng: number } | null>(
+    outlet?.latitude && outlet?.longitude 
+      ? { lat: parseFloat(outlet.latitude), lng: parseFloat(outlet.longitude) } 
+      : null
+  )
+
   useEffect(() => {
     setFormData({
       name: outlet?.name || '',
       location: outlet?.location || '',
-      mapsUrl: outlet?.mapsUrl || '',
+      latitude: outlet?.latitude || '',
+      longitude: outlet?.longitude || '',
       status: outlet?.status || 'offline' as const,
       features: {
         qris: outlet?.features.qris ?? true,
@@ -55,11 +72,72 @@ function OutletForm({ outlet, onClose, onSubmit }: OutletFormProps) {
       },
       lastHeartbeat: outlet?.lastHeartbeat || new Date().toISOString()
     })
+    setSelectedPosition(
+      outlet?.latitude && outlet?.longitude 
+        ? { lat: parseFloat(outlet.latitude), lng: parseFloat(outlet.longitude) } 
+        : null
+    )
   }, [outlet])
+
+  const handleMapClick = (lat: number, lng: number) => {
+    setSelectedPosition({ lat, lng })
+    setFormData(prev => ({
+      ...prev,
+      latitude: lat.toString(),
+      longitude: lng.toString()
+    }))
+  }
+
+  const handleLatitudeChange = (value: string) => {
+    setFormData(prev => ({ ...prev, latitude: value }))
+    if (value && formData.longitude) {
+      const lat = parseFloat(value)
+      const lng = parseFloat(formData.longitude)
+      if (!isNaN(lat) && !isNaN(lng)) {
+        setSelectedPosition({ lat, lng })
+      }
+    }
+  }
+
+  const handleLongitudeChange = (value: string) => {
+    setFormData(prev => ({ ...prev, longitude: value }))
+    if (formData.latitude && value) {
+      const lat = parseFloat(formData.latitude)
+      const lng = parseFloat(value)
+      if (!isNaN(lat) && !isNaN(lng)) {
+        setSelectedPosition({ lat, lng })
+      }
+    }
+  }
+
+  const useCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords
+          setSelectedPosition({ lat: latitude, lng: longitude })
+          setFormData(prev => ({
+            ...prev,
+            latitude: latitude.toString(),
+            longitude: longitude.toString()
+          }))
+          toast.success('Lokasi saat ini berhasil dipilih')
+        },
+        (error) => {
+          toast.error('Tidak dapat mengakses lokasi: ' + error.message)
+        }
+      )
+    } else {
+      toast.error('Geolocation tidak didukung di browser ini')
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit(formData)
+    onSubmit({
+      ...formData,
+      mapsUrl: `https://maps.google.com/?q=${formData.latitude},${formData.longitude}`
+    })
     onClose()
   }
 
@@ -111,42 +189,48 @@ function OutletForm({ outlet, onClose, onSubmit }: OutletFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Pick Location on Map</label>
+            <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Lokasi di Peta</label>
             <div className="space-y-2">
-              <div className="relative w-full h-64 rounded-lg overflow-hidden border dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
-                <iframe
-                  id="map-embed"
-                  className="w-full h-full"
-                  src={formData.mapsUrl || "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d126748.56398935027!2d106.698688671875!3d-6.208763868808566!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f5390917b5c7%3A0x2e69f5390917b5c7!2sJakarta!5e0!3m2!1sen!2sid!4v1620000000000!5m2!1sen!2sid"}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
+              <LocationMap
+                selectedLatLng={selectedPosition}
+                onMapClick={handleMapClick}
+              />
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium mb-1 text-gray-900 dark:text-white">Latitude</label>
+                  <input
+                    type="text"
+                    value={formData.latitude || ''}
+                    onChange={(e) => handleLatitudeChange(e.target.value)}
+                    placeholder="5.1736"
+                    className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1 text-gray-900 dark:text-white">Longitude</label>
+                  <input
+                    type="text"
+                    value={formData.longitude || ''}
+                    onChange={(e) => handleLongitudeChange(e.target.value)}
+                    placeholder="97.1316"
+                    className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  />
+                </div>
               </div>
+
               <button
                 type="button"
-                onClick={() => {
-                  window.open('https://www.google.com/maps', '_blank')
-                }}
-                className="w-full px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 flex items-center justify-center gap-2"
+                onClick={useCurrentLocation}
+                className="w-full px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 flex items-center justify-center gap-2 text-sm"
               >
-                <MapPin className="w-4 h-4" />
-                Open Google Maps to Select Location
+                <Navigation className="w-4 h-4" />
+                Gunakan Lokasi Saat Ini
               </button>
+
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                1. Click button above to open Google Maps{String.fromCharCode(10)}
-                2. Navigate to your desired location{String.fromCharCode(10)}
-                3. Click Share {'->'} Embed a map{String.fromCharCode(10)}
-                4. Copy the src URL and paste below
+                Klik pada peta atau isi koordinat di atas untuk menentukan lokasi outlet
               </p>
-              <input
-                type="url"
-                value={formData.mapsUrl}
-                onChange={(e) => setFormData({ ...formData, mapsUrl: e.target.value })}
-                placeholder="Paste Google Maps embed URL here..."
-                className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                required
-              />
             </div>
           </div>
 
@@ -253,7 +337,6 @@ export function OutletModule() {
   
       const result = await res.json()
   
-   
       if (!res.ok) {
         throw new Error(result.message || 'Failed to create outlet')
       }
@@ -271,10 +354,10 @@ export function OutletModule() {
     const fetchOutlets = async () => {
       const res = await fetch('/api/outlets')
       const data = await res.json()
-  
+
       useDashboardStore.getState().setOutlets(data)
     }
-  
+
     fetchOutlets()
   }, [])
 
@@ -292,7 +375,6 @@ export function OutletModule() {
   
       const result = await res.json()
   
-      // 🔥 WAJIB
       if (!res.ok) {
         throw new Error(result.message || 'Failed to update outlet')
       }
@@ -484,7 +566,7 @@ export function OutletModule() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setDeleteConfirm(null)}
-                  className="flex-1 px-4 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  className="flex-1 px-4 py-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white"
                 >
                   Cancel
                 </button>

@@ -6,12 +6,12 @@ import {
   Store, 
   Image, 
   CreditCard, 
-  Settings, 
   BarChart3, 
   QrCode,
   Gift,
   MessageSquare,
   MapPin,
+  Building2,
   ChevronRight,
   Menu,
   X,
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAuth } from '@/lib/auth-context'
 
 // ============================================
 // Sidebar Item Component
@@ -65,17 +66,19 @@ export function Sidebar() {
     darkMode,
     toggleDarkMode
   } = useDashboardStore()
+  const { user, isLoading } = useAuth()
+
+  const role = user?.role?.toUpperCase()
+  const isStaff = role === 'STAFF'
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', module: 'dashboard' },
-    { icon: Store, label: 'Outlets', module: 'outlets' },
-    { icon: Image, label: 'Template Frames', module: 'templates' },
-    { icon: Users, label: 'User Management', module: 'users' },
-    { icon: Gift, label: 'Vouchers', module: 'vouchers' },
-    { icon: MessageSquare, label: 'Testimonials', module: 'testimonials' },
-    { icon: MapPin, label: 'Locations', module: 'locations' },
-    { icon: BarChart3, label: 'Reports', module: 'reports' },
-    { icon: Settings, label: 'Settings', module: 'settings' },
+    { icon: Building2, label: 'Tenants', module: 'tenants' },
+    ...(isStaff ? [] : [{ icon: Users, label: 'User Management', module: 'users' }]),
+    ...(isStaff ? [] : [{ icon: Gift, label: 'Vouchers', module: 'vouchers' }]),
+    ...(isStaff ? [] : [{ icon: MessageSquare, label: 'Testimonials', module: 'testimonials' }]),
+    ...(isStaff ? [] : [{ icon: MapPin, label: 'Locations', module: 'locations' }]),
+    ...(isStaff ? [] : [{ icon: BarChart3, label: 'Reports', module: 'reports' }]),
   ]
 
   return (
@@ -127,7 +130,13 @@ export function Sidebar() {
           </button>
           
           {/* Logout */}
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-600 hover:bg-gray-50 rounded-lg dark:text-gray-400 dark:hover:bg-gray-800">
+          <button
+            onClick={async () => {
+              await fetch('/api/auth/logout', { method: 'POST' })
+              window.location.href = '/admin/login'
+            }}
+            className="w-full flex items-center gap-3 px-3 py-2 text-left text-red-500 hover:bg-red-50 rounded-lg dark:text-red-400 dark:hover:bg-red-900/20"
+          >
             <LogOut className="w-5 h-5" />
             <span>Logout</span>
           </button>

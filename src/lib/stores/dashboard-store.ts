@@ -9,6 +9,8 @@ export interface Outlet {
   name: string
   location: string
   mapsUrl: string
+  latitude?: string
+  longitude?: string
   status: 'online' | 'offline' | 'error'
   features: {
     qris: boolean
@@ -34,13 +36,15 @@ export interface User {
   name: string
   email: string
   role: 'owner' | 'manager' | 'staff'
-  outletId?: string
   status: 'active' | 'inactive'
+  tenantId?: string
+  tenantName?: string
   createdAt: string
 }
 
 export interface Voucher {
   id: string
+  tenantId?: string
   code: string
   usageType: 'SINGLE_USE' | 'MULTI_USE'
   discountType: 'percentage' | 'fixed'
@@ -111,6 +115,7 @@ interface DashboardState {
   sidebarOpen: boolean
   activeModule: string
   searchQuery: string
+  selectedOutletId: string | null
   
   // Actions - Outlets
   addOutlet: (outlet: Omit<Outlet, 'id' | 'createdAt'>) => void
@@ -147,6 +152,12 @@ interface DashboardState {
   // Actions - Branding
   updateBranding: (data: Partial<Branding>) => void
   
+  // Actions - Transactions
+  setTransactions: (transactions: Transaction[]) => void
+
+  // Actions - Selected Outlet (for per-outlet management)
+  setSelectedOutletId: (id: string | null) => void
+
   // Actions - UI
   toggleDarkMode: () => void
   toggleSidebar: () => void
@@ -245,7 +256,6 @@ const mockUsers: User[] = [
     name: 'Jane Smith',
     email: 'jane@snapnext.com',
     role: 'manager',
-    outletId: '1',
     status: 'active',
     createdAt: '2024-01-10T10:00:00Z'
   },
@@ -254,7 +264,6 @@ const mockUsers: User[] = [
     name: 'Bob Wilson',
     email: 'bob@snapnext.com',
     role: 'staff',
-    outletId: '2',
     status: 'active',
     createdAt: '2024-01-15T10:00:00Z'
   }
@@ -410,15 +419,16 @@ function generateVoucherCode(): string {
 // ============================================
 
 export const useDashboardStore = create<DashboardState>((set) => ({
-  // Initial Data
-  outlets: mockOutlets,
+  // Initial Data — outlets/users/vouchers/testimonials loaded from Supabase on admin page mount
+  outlets: [],
   templates: mockTemplates,
-  users: mockUsers,
-  vouchers: mockVouchers,
-  testimonials: mockTestimonials,
+  users: [],
+  vouchers: [],
+  testimonials: [],
   branding: mockBranding,
-  transactions: mockTransactions,
+  transactions: [],
   boothStatuses: mockBoothStatuses,
+  selectedOutletId: null,
   
   // Initial UI State
   darkMode: false,
@@ -505,6 +515,12 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     testimonials: state.testimonials.filter((t) => t.id !== id)
   })),
   setTestimonials: (testimonials) => set({ testimonials }),
+  
+  // Transactions Actions
+  setTransactions: (transactions) => set({ transactions }),
+  
+  // Selected Outlet
+  setSelectedOutletId: (id) => set({ selectedOutletId: id }),
   
   // Branding Actions
   updateBranding: (data) => set((state) => ({

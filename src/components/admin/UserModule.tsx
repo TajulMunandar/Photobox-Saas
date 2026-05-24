@@ -13,6 +13,7 @@ import {
   Check
 } from 'lucide-react'
 import { useDashboardStore, User } from '@/lib/stores/dashboard-store'
+import { useAuth } from '@/lib/auth-context'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -20,25 +21,42 @@ import { motion, AnimatePresence } from 'framer-motion'
 // User Form Component
 // ============================================
 
+interface TenantOption {
+  id: string
+  name: string
+}
+
 interface UserFormProps {
   user?: User | null
+  tenants: TenantOption[]
   onClose: () => void
   onSubmit: (data: Omit<User, 'id' | 'createdAt'>) => void
 }
 
-function UserForm({ user, onClose, onSubmit }: UserFormProps) {
-  const { outlets } = useDashboardStore()
-  const [formData, setFormData] = useState({
+function UserForm({ user, tenants, onClose, onSubmit }: UserFormProps) {
+  const [formData, setFormData] = useState<Record<string, string>>({
     name: user?.name || '',
     email: user?.email || '',
-    role: user?.role || 'staff' as const,
-    outletId: user?.outletId || '',
-    status: user?.status || 'active'
+    role: user?.role || 'staff',
+    tenantId: user?.tenantId || '',
+    status: user?.status || 'active',
+    password: '',
+    confirmPassword: '',
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit(formData)
+    if (!user && formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match')
+      return
+    }
+    if (!user && !formData.password) {
+      toast.error('Password is required')
+      return
+    }
+    const { confirmPassword, ...submitData } = formData
+    const payload = formData.role === 'SUPER_ADMIN' ? { ...submitData, tenantId: undefined } : submitData
+    onSubmit(payload as any)
     onClose()
   }
 
@@ -93,26 +111,27 @@ function UserForm({ user, onClose, onSubmit }: UserFormProps) {
             <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Role</label>
             <select
               value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as 'owner' | 'manager' | 'staff' })}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value, tenantId: e.target.value === 'SUPER_ADMIN' ? '' : formData.tenantId })}
               className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
+              <option value="SUPER_ADMIN">Super Admin</option>
               <option value="owner">Owner</option>
               <option value="manager">Manager Outlet</option>
               <option value="staff">Staff</option>
             </select>
           </div>
 
-          {(formData.role === 'manager' || formData.role === 'staff') && (
+          {formData.role !== 'SUPER_ADMIN' && (
             <div>
-              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Assigned Outlet</label>
+              <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Tenant</label>
               <select
-                value={formData.outletId}
-                onChange={(e) => setFormData({ ...formData, outletId: e.target.value })}
+                value={formData.tenantId}
+                onChange={(e) => setFormData({ ...formData, tenantId: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
-                <option value="">Select Outlet</option>
-                {outlets.map((outlet) => (
-                  <option key={outlet.id} value={outlet.id}>{outlet.name}</option>
+                <option value="">Pilih Tenant</option>
+                {tenants.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>
             </div>
@@ -129,6 +148,31 @@ function UserForm({ user, onClose, onSubmit }: UserFormProps) {
               <option value="inactive">Inactive</option>
             </select>
           </div>
+
+          {!user && (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Password</label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-white">Confirm Password</label>
+                <input
+                  type="password"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  required
+                />
+              </div>
+            </>
+          )}
 
           <div className="flex gap-2 pt-4">
             <button
@@ -156,11 +200,14 @@ function UserForm({ user, onClose, onSubmit }: UserFormProps) {
 // ============================================
 
 export function UserModule() {
-  const { users, outlets, addUser, updateUser, deleteUser, searchQuery } = useDashboardStore()
+  const { users, addUser, updateUser, deleteUser, searchQuery } = useDashboardStore()
+  const { user: currentUser } = useAuth()
+  const isManager = currentUser?.role?.toUpperCase() === 'MANAGER'
   const [showForm, setShowForm] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [filterRole, setFilterRole] = useState<string>('all')
+  const [tenants, setTenants] = useState<TenantOption[]>([])
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
@@ -206,8 +253,17 @@ export function UserModule() {
     
         useDashboardStore.getState().setUsers(data)
       }
+
+      const fetchTenants = async () => {
+        const res = await fetch('/api/tenants')
+        if (res.ok) {
+          const data = await res.json()
+          setTenants(data)
+        }
+      }
     
       fetchUsers()
+      fetchTenants()
     }, [])
 
  const handleUpdate = async (data: Omit<User, 'id' | 'createdAt'>) => {
@@ -264,12 +320,6 @@ export function UserModule() {
     return styles[role as keyof typeof styles] || styles.staff
   }
 
-  const getOutletName = (outletId?: string) => {
-    if (!outletId) return '-'
-    const outlet = outlets.find(o => o.id === outletId)
-    return outlet?.name || '-'
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -321,10 +371,10 @@ export function UserModule() {
                   User
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Role
+                  Tenant
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Outlet
+                  Role
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Status
@@ -348,13 +398,13 @@ export function UserModule() {
                       </div>
                     </div>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {user.tenantName || '-'}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`text-xs px-2 py-1 rounded-full ${getRoleBadge(user.role)}`}>
                       {user.role}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {getOutletName(user.outletId)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`text-xs px-2 py-1 rounded-full ${
@@ -367,21 +417,25 @@ export function UserModule() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingUser(user)
-                          setShowForm(true)
-                        }}
-                        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-                      >
-                        <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirm(user.id)}
-                        className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400"
-                      >
-                        <Trash2 className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                      </button>
+                      {!(isManager && user.role === 'owner') && (
+                        <button
+                          onClick={() => {
+                            setEditingUser(user)
+                            setShowForm(true)
+                          }}
+                          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                        >
+                          <Edit className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                        </button>
+                      )}
+                      {!(isManager && user.role === 'owner') && (
+                        <button
+                          onClick={() => setDeleteConfirm(user.id)}
+                          className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400"
+                        >
+                          <Trash2 className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -403,6 +457,7 @@ export function UserModule() {
         {showForm && (
           <UserForm
             user={editingUser}
+            tenants={tenants}
             onClose={() => {
               setShowForm(false)
               setEditingUser(null)

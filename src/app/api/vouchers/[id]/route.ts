@@ -10,6 +10,7 @@ export async function PUT(
     const auth = getAuth(req)
     const body = await req.json()
     const voucherId = params.id
+    const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'
 
     if (!body.discountType || !body.discountValue) {
       return Response.json(
@@ -37,12 +38,13 @@ export async function PUT(
       )
     }
 
+    const updateWhere: any = { id: voucherId }
+    if (!isSuperAdmin) {
+      updateWhere.tenantId = auth.tenantId
+    }
 
     const result = await prisma.voucher.update({
-      where: {
-        id: voucherId,
-        tenantId: auth.tenantId, // 🔒 biar aman (multi-tenant)
-      },
+      where: updateWhere,
       data: {
         type: body.discountType === 'percentage' ? 'PERCENTAGE' : 'FIXED',
         value: body.discountValue,
@@ -104,8 +106,17 @@ export async function DELETE(
   try {
     const auth = getAuth(req)
     const voucherId = params.id
+    const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'
 
     await prisma.$transaction(async (tx) => {
+      const voucherWhere: any = { id: voucherId }
+      if (!isSuperAdmin) {
+        voucherWhere.tenantId = auth.tenantId
+      }
+      const voucher = await tx.voucher.findFirst({
+        where: voucherWhere,
+      })
+      if (!voucher) throw new Error('Voucher not found')
 
       await tx.voucher.delete({
         where: {

@@ -8,6 +8,7 @@ export async function PUT(
 ) {
   try {
     const auth = getAuth(req)
+    const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'
     const body = await req.json()
     const userId = params.id
 
@@ -18,26 +19,38 @@ export async function PUT(
       )
     }
 
+    // MANAGER cannot edit OWNER users
+    const isManager = auth.user?.role === 'MANAGER'
+    if (isManager) {
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true },
+      })
+      if (targetUser?.role === 'OWNER') {
+        return Response.json(
+          { message: 'Manager cannot edit owner users' },
+          { status: 403 }
+        )
+      }
+    }
+
+    const updateData: any = {
+      name: body.name,
+      email: body.email,
+      role: body.role.toUpperCase(),
+      isActive: body.status === 'active',
+    }
+    if (isSuperAdmin && body.tenantId) {
+      updateData.tenantId = body.tenantId
+    }
+
     const result = await prisma.$transaction(async (tx) => {
 
       const user = await tx.user.update({
         where: {
           id: userId,
         },
-        data: {
-          name: body.name,
-          outletId: body.outletId || null,
-          email: body.email,
-          role: body.role.toUpperCase(),
-          isActive: body.status === 'active',
-        },
-        include: {
-          outlet: {
-            select: {
-              name: true,
-            },
-          },
-        },
+        data: updateData,
       })
       return user
     })
@@ -45,14 +58,10 @@ export async function PUT(
       return Response.json({
       id: result.id,
       tenantId: result.tenantId,
-      outletId: result.outletId ?? '',
       email: result.email ?? '',
       name: result.name ?? '',
       role: result.role ?? '',
-
       status: result.isActive ? 'active' : 'inactive',
-
-      outletName: result.outlet?.name ?? '',
       createdAt: result.createdAt,
     })
 
@@ -75,7 +84,26 @@ export async function DELETE(
 ) {
   try {
     const auth = getAuth(req)
+    const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'
     const userId = params.id
+
+    if (!isSuperAdmin) {
+      // Only allow deleting users in your own tenant
+      const userToDelete = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { tenantId: true, role: true },
+      })
+      if (!userToDelete || userToDelete.tenantId !== auth.tenantId) {
+        return Response.json({ message: 'Forbidden' }, { status: 403 })
+      }
+      // MANAGER cannot delete OWNER users
+      if (auth.user?.role === 'MANAGER' && userToDelete.role === 'OWNER') {
+        return Response.json(
+          { message: 'Manager cannot delete owner users' },
+          { status: 403 }
+        )
+      }
+    }
 
     await prisma.$transaction(async (tx) => {
 

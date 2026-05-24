@@ -1,9 +1,9 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { 
   Store, 
   Image, 
-  Users, 
   Gift, 
   TrendingUp, 
   TrendingDown,
@@ -58,15 +58,40 @@ function StatCard({ title, value, change, positive, icon: Icon, color }: StatCar
 // ============================================
 
 export function DashboardOverview() {
-  const { outlets, templates, users, vouchers, transactions, boothStatuses } = useDashboardStore()
+  const { outlets, templates, vouchers, transactions, boothStatuses } = useDashboardStore()
+  const [liveStatuses, setLiveStatuses] = useState<typeof boothStatuses>([])
+  const [tenantCount, setTenantCount] = useState(0)
+
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      try {
+        const res = await fetch('/api/booths/status')
+        if (res.ok) setLiveStatuses(await res.json())
+      } catch {}
+    }
+    fetchStatuses()
+    const interval = setInterval(fetchStatuses, 10000)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    const fetchTenants = async () => {
+      try {
+        const res = await fetch('/api/tenants')
+        if (res.ok) {
+          const data = await res.json()
+          setTenantCount(data.length)
+        }
+      } catch {}
+    }
+    fetchTenants()
+  }, [])
 
   // Calculate stats
   const totalOutlets = outlets.length
   const activeOutlets = outlets.filter(o => o.status === 'online').length
   const totalTemplates = templates.length
   const activeTemplates = templates.filter(t => t.isActive).length
-  const totalUsers = users.length
-  const activeUsers = users.filter(u => u.status === 'active').length
   const totalVouchers = vouchers.length
   const activeVouchers = vouchers.filter(v => v.isActive).length
 
@@ -190,13 +215,13 @@ export function DashboardOverview() {
           className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
         >
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-              <Users className="w-5 h-5 text-green-600 dark:text-green-400" />
+            <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
+              <Store className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Users</span>
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Tenants</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{activeUsers} / {totalUsers}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Active users</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{tenantCount}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Total tenant</p>
         </motion.div>
 
         <motion.div
@@ -275,7 +300,7 @@ export function DashboardOverview() {
         >
           <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Booth Status</h2>
           <div className="space-y-4">
-            {boothStatuses.map((booth) => (
+            {(liveStatuses.length ? liveStatuses : boothStatuses).map((booth) => (
               <div key={booth.id} className="flex items-center justify-between py-2 border-b dark:border-gray-800 last:border-0">
                 <div className="flex items-center gap-3">
                   {getStatusIcon(booth.status)}
@@ -292,46 +317,6 @@ export function DashboardOverview() {
           </div>
         </motion.div>
       </div>
-
-      {/* Quick Actions */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
-        className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border dark:border-gray-800"
-      >
-        <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <button 
-            onClick={() => useDashboardStore.getState().setActiveModule('outlets')}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors"
-          >
-            <Store className="w-8 h-8 text-gray-400 dark:text-gray-300" />
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Add Outlet</span>
-          </button>
-          <button 
-            onClick={() => useDashboardStore.getState().setActiveModule('vouchers')}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors"
-          >
-            <Gift className="w-8 h-8 text-gray-400 dark:text-gray-300" />
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Create Voucher</span>
-          </button>
-          <button 
-            onClick={() => useDashboardStore.getState().setActiveModule('templates')}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors"
-          >
-            <Image className="w-8 h-8 text-gray-400 dark:text-gray-300" />
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Upload Template</span>
-          </button>
-          <button 
-            onClick={() => useDashboardStore.getState().setActiveModule('testimonials')}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors"
-          >
-            <Users className="w-8 h-8 text-gray-400 dark:text-gray-300" />
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Add Testimonial</span>
-          </button>
-        </div>
-      </motion.div>
     </div>
   )
 }

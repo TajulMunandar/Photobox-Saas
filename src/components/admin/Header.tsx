@@ -2,9 +2,11 @@
 
 import { Menu, Bell, Search, User } from 'lucide-react'
 import { useDashboardStore } from '@/lib/stores/dashboard-store'
+import { useAuth } from '@/lib/auth-context'
 
 export function Header() {
   const { toggleSidebar, searchQuery, setSearchQuery } = useDashboardStore()
+  const { user } = useAuth()
 
   return (
     <header className="h-16 bg-white dark:bg-gray-900 border-b dark:border-gray-800 flex items-center justify-between px-4">
@@ -48,7 +50,9 @@ export function Header() {
 
         {/* Tenant Name */}
         <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-900/30">
-          <span className="text-sm font-medium text-purple-600 dark:text-purple-400">SnapNext Vendor</span>
+          <span className="text-sm font-medium text-purple-600 dark:text-purple-400">
+            {user ? user.name.split(' ')[0] : 'Vendor'}
+          </span>
         </div>
 
         {/* Profile */}
@@ -56,7 +60,9 @@ export function Header() {
           <div className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center">
             <User className="w-4 h-4 text-white" />
           </div>
-          <span className="hidden sm:block text-sm font-medium text-gray-900 dark:text-white">Admin User</span>
+          <span className="hidden sm:block text-sm font-medium text-gray-900 dark:text-white">
+            {user ? user.name : 'Admin'}
+          </span>
         </div>
       </div>
     </header>
