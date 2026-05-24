@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
-import { prisma } from '@/lib/prisma'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'snapnext-dev-secret-key-change-in-production'
 const JWT_EXPIRES_IN = '7d'
@@ -75,6 +74,9 @@ export function verifyToken(token: string): AuthUser | null {
 
 export async function login(email: string, password: string): Promise<LoginResult> {
   try {
+    // Dynamic import to avoid PrismaClient initialization during build-time page data collection
+    const { prisma } = await import('@/lib/prisma')
+
     // Find user by email
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
