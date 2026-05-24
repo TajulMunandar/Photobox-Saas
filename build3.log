@@ -1,0 +1,99 @@
+﻿
+> snapnext-saas@1.0.0 build
+> next build
+
+   Γû▓ Next.js 14.1.0
+   - Environments: .env
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/34) ...
+
+   Generating static pages (8/34) 
+node.exe : Payment status API error: ex [Error]: Dynamic server usage: Page couldn't be rendered statically because it 
+used `nextUrl.searchParams`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Payment status ...ic-server-error:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    at Object.eP [as staticGenerationBailout] 
+(D:\kerja\code\photobox\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:29358)
+    at n (D:\kerja\code\photobox\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:33712)
+    at Object.get 
+(D:\kerja\code\photobox\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:34359)
+    at i (D:\kerja\code\photobox\.next\server\app\api\payment\status\route.js:1:533)
+    at D:\kerja\code\photobox\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:42490
+    at D:\kerja\code\photobox\node_modules\next\dist\server\lib\trace\tracer.js:133:36
+    at NoopContextManager.with 
+(D:\kerja\code\photobox\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
+    at ContextAPI.with (D:\kerja\code\photobox\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
+    at NoopTracer.startActiveSpan 
+(D:\kerja\code\photobox\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
+    at ProxyTracer.startActiveSpan 
+(D:\kerja\code\photobox\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854) {
+  description: "Page couldn't be rendered statically because it used `nextUrl.searchParams`. See more info here: 
+https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+
+   Generating static pages (16/34) 
+
+   Generating static pages (25/34) 
+
+ Γ£ô Generating static pages (34/34) 
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+Γöî Γùï /                                    5.43 kB         134 kB
+Γö£ Γùï /_not-found                          882 B          85.6 kB
+Γö£ Γùï /admin                               39.4 kB         164 kB
+Γö£ Γùï /admin/login                         5.47 kB         127 kB
+Γö£ ╬╗ /api/auth/login                      0 B                0 B
+Γö£ ╬╗ /api/auth/logout                     0 B                0 B
+Γö£ ╬╗ /api/auth/me                         0 B                0 B
+Γö£ ╬╗ /api/booth/save-session              0 B                0 B
+Γö£ ╬╗ /api/booths/status                   0 B                0 B
+Γö£ ╬╗ /api/brand-assets                    0 B                0 B
+Γö£ ╬╗ /api/brand-assets/[id]               0 B                0 B
+Γö£ ╬╗ /api/outlets                         0 B                0 B
+Γö£ ╬╗ /api/outlets/[id]                    0 B                0 B
+Γö£ ╬╗ /api/payment/qris                    0 B                0 B
+Γö£ ╬╗ /api/payment/status                  0 B                0 B
+Γö£ ╬╗ /api/photos/upload                   0 B                0 B
+Γö£ ╬╗ /api/print                           0 B                0 B
+Γö£ ╬╗ /api/send-wa                         0 B                0 B
+Γö£ ╬╗ /api/sessions                        0 B                0 B
+Γö£ ╬╗ /api/templates                       0 B                0 B
+Γö£ ╬╗ /api/templates/[id]                  0 B                0 B
+Γö£ ╬╗ /api/templates/active                0 B                0 B
+Γö£ ╬╗ /api/tenants                         0 B                0 B
+Γö£ ╬╗ /api/tenants/[id]                    0 B                0 B
+Γö£ ╬╗ /api/testimonials                    0 B                0 B
+Γö£ ╬╗ /api/testimonials/[id]               0 B                0 B
+Γö£ ╬╗ /api/transactions                    0 B                0 B
+Γö£ ╬╗ /api/users                           0 B                0 B
+Γö£ ╬╗ /api/users/[id]                      0 B                0 B
+Γö£ ╬╗ /api/vouchers                        0 B                0 B
+Γö£ ╬╗ /api/vouchers/[id]                   0 B                0 B
+Γö£ ╬╗ /api/vouchers/active                 0 B                0 B
+Γö£ Γùï /booth                               15.5 kB         140 kB
+Γö£ Γùï /booth/login                         4.94 kB         130 kB
+Γö£ Γùï /features                            3.52 kB         132 kB
+Γö£ Γùï /gallery                             2.52 kB         124 kB
+Γö£ Γùï /locations                           3.03 kB         131 kB
+Γö£ Γùï /pricing                             3.15 kB         132 kB
+Γöö Γùï /testimonials                        2.81 kB         131 kB
++ First Load JS shared by all            84.7 kB
+  Γö£ chunks/69-6c170b157b6fdb10.js        28.9 kB
+  Γö£ chunks/fd9d1056-44bf5c2e83d56d16.js  53.4 kB
+  Γöö other shared chunks (total)          2.4 kB
+
+
+Γùï  (Static)   prerendered as static content
+╬╗  (Dynamic)  server-rendered on demand using Node.js
+

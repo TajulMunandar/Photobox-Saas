@@ -1,7 +1,6 @@
-import { prisma } from '@/lib/prisma'
-
 export async function POST(req: Request) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const body = await req.json()
     const { outletId, frameId, sessionCode, photos, totalPrice, paymentMethod, paymentRef, voucherCode, voucherDiscount, galleryCode } = body
 
